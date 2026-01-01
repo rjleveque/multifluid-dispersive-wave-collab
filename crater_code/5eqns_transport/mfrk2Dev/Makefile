@@ -55,7 +55,6 @@ SOURCES = \
   advanc.f \
   b4step2.f90 \
   qinit.f \
-  intfil.f90 \
   cellave2.f \
   mapc2p.f \
   fss.f \
@@ -99,6 +98,7 @@ SOURCES = \
 #  b4step2.f90 \
 #  tick.f \
 #  ./valout.f90 \
+#  intfil.f90 \
 
 #-------------------------------------------------------------------
 # Include Makefile containing standard definitions and make options:
