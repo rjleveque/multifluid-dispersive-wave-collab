@@ -279,7 +279,7 @@ c        Call b4step2 here so that time dependent arrays can be filled properly
          locaux = node(storeaux,mptr)
          call b4step2(nghost, nx, ny, nvar, alloc(locnew), 
      &                rnode(cornxlo,mptr), rnode(cornylo,mptr), hx, hy, 
-     &                time, dt, naux, alloc(locaux))
+     &                time, dt, naux, alloc(locaux),mptr,level,istage)
 
          if (node(ffluxptr,mptr) .ne. 0) then
             lenbc  = 2*(nx/intratx(level-1)+ny/intraty(level-1))
@@ -312,7 +312,7 @@ c           # Unsplit method
          call stepgrid(alloc(locnew),fm,fp,gm,gp,
      2                 mitot,mjtot,nghost,
      3                 delt,dtnew,hx,hy,nvar,
-     4                 xlow,ylow,time,mptr,naux,alloc(locaux))
+     4                 xlow,ylow,time,mptr,naux,alloc(locaux),istage)
          else if (dimensional_split .eq. 1) then
 c           # Godunov splitting
             write(6,*)"this option not supported"
@@ -323,18 +323,20 @@ c           # should never get here due to check in amr2
             stop
          endif
 
-      if (node(cfluxptr,mptr) .ne. 0)
-     2   call fluxsv(mptr,fm,fp,gm,gp,
-     3               alloc(node(cfluxptr,mptr)),mitot,mjtot,
-     4               nvar,listsp(level),delt,hx,hy)
-         if (node(ffluxptr,mptr) .ne. 0) then
-         lenbc = 2*(nx/intratx(level-1)+ny/intraty(level-1))
-            locsvf = node(ffluxptr,mptr)
-         call fluxad(fm,fp,gm,gp,
-     2               alloc(locsvf),mptr,mitot,mjtot,nvar,
-     4                  lenbc,intratx(level-1),intraty(level-1),
-     5               nghost,delt,hx,hy)
-         endif
+c   conservation turned off for now, so dont save stuff
+c     if (node(cfluxptr,mptr) .ne. 0)
+c    2   call fluxsv(mptr,fm,fp,gm,gp,
+c    3               alloc(node(cfluxptr,mptr)),mitot,mjtot,
+c    4               nvar,listsp(level),delt,hx,hy)
+c        if (node(ffluxptr,mptr) .ne. 0) then
+c        lenbc = 2*(nx/intratx(level-1)+ny/intraty(level-1))
+c           locsvf = node(ffluxptr,mptr)
+c        call fluxad(fm,fp,gm,gp,
+c    2               alloc(locsvf),mptr,mitot,mjtot,nvar,
+c    4                  lenbc,intratx(level-1),intraty(level-1),
+c    5               nghost,delt,hx,hy)
+c        endif
+
 c
 c        write(outunit,969) mythread,delt, dtnew
 c969     format(" thread ",i4," updated by ",e15.7, " new dt ",e15.7)
@@ -350,8 +352,8 @@ c
       implicit real*8 (a-h, o-z)
       dimension q(nvar,mitot,mjtot), qold(nvar,mitot,mjtot)
 
-      ! this is final update for 3 stage ssp rk scheme
-      ! q comes in, it should be  q3, qold is q(t_n)
+      ! this is final update for 2 and 3 stage ssp rk scheme
+      ! q comes in, it should be  q3 for 3 stage, qold is q(t_n)
 
       if (mstage .eq. 2) then
           do j = nghost+1, mjtot-nghost

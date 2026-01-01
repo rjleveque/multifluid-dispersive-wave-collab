@@ -22,7 +22,7 @@ c
 !! \param[out] gm fluxes on the lower side of each horizontal edge
 !! \param[out] gp fluxes on the upper side of each horizontal edge
       subroutine stepgrid(q,fm,fp,gm,gp,mitot,mjtot,mbc,dt,dtnew,
-     &                  dx,dy,nvar,xlow,ylow,time,mptr,maux,aux)
+     &                  dx,dy,nvar,xlow,ylow,time,mptr,maux,aux,istage)
 c
 c          
 c ::::::::::::::::::: STEPGRID ::::::::::::::::::::::::::::::::::::
@@ -70,7 +70,7 @@ c     # needed there.
       tcom = time
 
       if (dump) then
-         !write(outunit,*) "dumping grid ",mptr," at time ",time
+         write(outunit,*) "dumping grid ",mptr," at time ",time
          do i = 1, mitot
          do j = 1, mjtot
             write(outunit,545) i-mbc,j-mbc,(q(ivar,i,j),ivar=1,nvar) 
@@ -112,10 +112,11 @@ c
 c     CHECK ARGS TO STEP2
       call step2(mbig,nvar,maux,mbc,mx,my,
      &           q, aux,dx,dy,dt,cflgrid,
-     &           dq,rpn2,rpt2)
+     &           dq,rpn2,rpt2,mptr)
 c
 c
-        write(outunit,1001) mptr, node(nestlevel,mptr),cflgrid
+        !write(outunit,1001) mptr, node(nestlevel,mptr),cflgrid
+        !write(*,1001) mptr, node(nestlevel,mptr),cflgrid
  1001   format(' Courant # of grid', i4,
      &        ' on level', i3, ' is  ', e10.3)
 c
@@ -148,10 +149,31 @@ c
          write(outunit,*) "dumping grid ",mptr," after stepgrid"
          do i = mbc+1, mitot-mbc
          do j = mbc+1, mjtot-mbc
-            !write(outunit,545) i,j,(q(ivar,i,j),ivar=1,nvar)
+            write(outunit,545) i,j,(q(ivar,i,j),ivar=1,nvar)
             xi = xlow+i*dx
             yj = ylow+j*dy
-            write(outunit,545) xi,yj,i,j,(q(ivar,i,j),ivar=1,nvar) 
+            !write(outunit,545) xi,yj,i,j,(q(ivar,i,j),ivar=1,nvar) 
+         end do
+         end do
+      endif
+
+c     test for negative densities after each stage
+      if (.true.) then
+         do i = mbc+1, mitot-mbc
+         do j = mbc+1, mjtot-mbc
+            if (q(1,i,j) .lt. 0.d0 .or. q(2,i,j) .lt. 0.d0) then 
+               write(outunit,*) "Grid ",mptr," level ",level,
+     &                " after stepgrid istage ",istage
+               write(*,*) "Grid ",mptr," level ",level,
+     &                " after stepgrid istage ",istage
+               write(outunit,*)"Found negative density on grid ",mptr,
+     &                " time ",time," END of stage ",istage
+               write(*,*)"Found negative density on grid ",mptr,
+     &                " time ",time," END of stage ",istage
+               write(outunit,900) i,j,(q(m,i,j),m=1,meqn)
+               write(*,900) i,j,(q(m,i,j),m=1,meqn)
+ 900          format(2i5,6e25.15)
+            endif
          end do
          end do
       endif

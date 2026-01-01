@@ -2,7 +2,7 @@ c
 c -------------------------------------------------------------
 c
       subroutine tfluct2(ixy,maxm,meqn,mwaves,mbc,maux,mx,
-     &           ql,qr,auxl,auxr,wave,s,adq)
+     &           ql,qr,auxl,auxr,s,adq)
 
       implicit double precision (a-h,o-z)
       dimension ql(meqn,1-mbc:maxm+mbc)
@@ -10,10 +10,8 @@ c
       dimension auxl(maux,1-mbc:maxm+mbc)
       dimension auxr(maux,1-mbc:maxm+mbc)
 
-      ! indexing not changed below 
-      dimension s(1-mbc:maxm+mbc,mwaves)
-      dimension wave(1-mbc:maxm+mbc,meqn,mwaves)
-      dimension adq(1-mbc:maxm+mbc,meqn)
+      dimension s(mwaves,1-mbc:maxm+mbc)
+      dimension adq(meqn,1-mbc:maxm+mbc)
       dimension ql_state(20),qr_state(20)
       dimension aux1(30),aux2(30)
       dimension delta(20)
@@ -31,19 +29,19 @@ c
 c
       do i=2-mbc,mx+mbc
          do ma=1,maux
-            aux1(ma) = auxl(i,ma)
-            aux2(ma) = auxr(i,ma)
+            aux1(ma) = auxl(ma,i)
+            aux2(ma) = auxr(ma,i)
             enddo
 c
          do m=1,meqn
-            ql_state(m) = ql(i,m)
-            qr_state(m) = qr(i,m)
+            ql_state(m) = ql(m,i)
+            qr_state(m) = qr(m,i)
             enddo
 c
-         ql_state(3) = ql(i,mu)
-         ql_state(4) = ql(i,mv)
-         qr_state(3) = qr(i,mu)
-         qr_state(4) = qr(i,mv)
+         ql_state(3) = ql(mu,i)
+         ql_state(4) = ql(mv,i)
+         qr_state(3) = qr(mu,i)
+         qr_state(4) = qr(mv,i)
 c
          do m=1,meqn
             delta(m) = qr_state(m)-ql_state(m)
@@ -62,7 +60,7 @@ c
 c
             speeds(mw,1) = area*dmin1(s_local(mw),0.d0)
             speeds(mw,2) = area*dmax1(s_local(mw),0.d0)
-            s(i,mw) = speeds(mw,1)+speeds(mw,2)
+            s(mw,i) = speeds(mw,1)+speeds(mw,2)
             enddo
 c
          do m=1,meqn

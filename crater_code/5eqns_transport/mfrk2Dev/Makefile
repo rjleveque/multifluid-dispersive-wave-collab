@@ -15,17 +15,17 @@ CLAWMAKE = $(CLAW)/clawutil/src/Makefile.common
 CLAW_PKG = amrclaw                  # Clawpack package to use
 EXE = xamr                          # Executable to create
 SETRUN_FILE = setrun.py             # File containing function to make data
-OUTDIR = _output                           # Directory for output
+OUTDIR = _outputc                           # Directory for output
 SETPLOT_FILE = setplot.py           # File containing function to set plots
-PLOTDIR = _plots                            # Directory for plots
+PLOTDIR = _plotsc                            # Directory for plots
 
 OVERWRITE ?= True                   # False ==> make a copy of OUTDIR first
 
 # Environment variable FC should be set to fortran compiler, e.g. gfortran
 
 # Compiler flags can be specified here or set as an environment variable
-FFLAGS ?= -O -fopenmp -fbounds-check -std=legacy -ffpe-trap='invalid,overflow,zero'  
-LFLAGS = -g   -fopenmp
+FFLAGS ?= -O2 -fopenmp -fbounds-check -std=legacy -ffpe-trap='invalid,overflow,zero' 
+LFLAGS = -g -fopenmp 
 
 # ---------------------------------
 # package sources for this program:
@@ -53,7 +53,9 @@ MODULES = \
 SOURCES = \
   qad.f \
   advanc.f \
+  b4step2.f90 \
   qinit.f \
+  intfil.f90 \
   cellave2.f \
   mapc2p.f \
   fss.f \

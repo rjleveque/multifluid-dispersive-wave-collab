@@ -32,7 +32,8 @@ def setplot(plotdata=None):
 
     plotdata.clearfigures()  # clear any old figures,axes,items data
 
-    plotdata.format = 'ascii'
+    plotdata.format = 'binary'
+    #plotdata.format = 'ascii'
 
     # loop
     # --------------------------
@@ -98,8 +99,8 @@ def setplot(plotdata=None):
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes()
-    plotaxes.xlimits = [0,2000]
-    plotaxes.ylimits = [-300, 350]
+    plotaxes.xlimits = [0,3000]
+    plotaxes.ylimits = [-550, 950]
     plotaxes.title = 'Surface plot'
     plotaxes.grid = True
 
@@ -154,6 +155,14 @@ def setplot(plotdata=None):
     plotitem.plotstyle = '-'
     plotitem.color = 'r'
     plotitem.amr_data_show = [0,1]  # which levels to plot data
+
+    # Set up for item on these axes: scatter of 2d data
+    plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
+    plotitem.map_2d_to_1d = surface
+    #plotitem.plot_var = 0
+    plotitem.plotstyle = '-'
+    plotitem.color = 'g'
+    plotitem.amr_data_show = [0,0,1]  # which levels to plot data
 
 
     #-----------------------------------------

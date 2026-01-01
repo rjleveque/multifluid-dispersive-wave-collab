@@ -38,7 +38,9 @@ c
               mitot = nx + 2*nghost
               mjtot = ny + 2*nghost
               nwords        = mitot*mjtot*nvar
-              if (level .lt. mxnest) 
+c             if (level .lt. mxnest) 
+c             ! finest level now has 2 storage levels for 2 stage RK
+              if (level .le. mxnest) 
      .           call reclam(node(store2, mptr), nwords)
               node(store2, mptr) = 0
               mptr          = node(levelptr, mptr)

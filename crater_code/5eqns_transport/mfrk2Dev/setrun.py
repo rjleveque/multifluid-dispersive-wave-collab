@@ -69,16 +69,17 @@ def setrun(claw_pkg='amrclaw'):
     # Lower and upper edge of computational domain:
     clawdata.lower[0] =  0.000000e+00          # xlower
     clawdata.upper[0] = 20.000000e+03          # xupper
-    clawdata.lower[1] = -5.000000e+03          # ylower
-    clawdata.upper[1] =  7.000000e+03          # yupper
+    clawdata.lower[1] = -4.000000e+03          # ylower
+    #clawdata.upper[1] =  7.040000e+03          # yupper
+    clawdata.upper[1] =  8.040000e+03          # yupper
     
     # Number of grid cells:
-    clawdata.num_cells[0] = 1000      # mx
-    clawdata.num_cells[1] = 600      # my
     #clawdata.num_cells[0] = 500      # mx
     #clawdata.num_cells[1] = 250      # my
-    #clawdata.num_cells[0] = 250      # mx
-    #clawdata.num_cells[1] = 125      # my
+    clawdata.num_cells[0] = 250      # mx
+    #clawdata.num_cells[1] = 138      # my
+    clawdata.num_cells[1] = 150      # my
+
     #clawdata.num_cells[0] = 100      # mx
     #clawdata.num_cells[1] =  50      # my
     #clawdata.num_cells[0] = 50      # mx
@@ -113,7 +114,7 @@ def setrun(claw_pkg='amrclaw'):
 
     clawdata.restart = False               # True to restart from prior results
     #clawdata.restart = True                # True to restart from prior results
-    clawdata.restart_file = 'fort.chk00036'  # File to use for restart data
+    clawdata.restart_file = 'fort.chk04064'  # File to use for restart data
     
     
     # -------------
@@ -130,6 +131,10 @@ def setrun(claw_pkg='amrclaw'):
         # Can specify num_output_times = 0 for no output
         clawdata.num_output_times = 30
         clawdata.tfinal = 60.0
+        #clawdata.num_output_times = 45
+        #clawdata.tfinal = 90.0
+        #clawdata.num_output_times = 60
+        #clawdata.tfinal = 120.0
         clawdata.output_t0 = True  # output at initial (or restart) time?
         
     elif clawdata.output_style == 2:
@@ -144,8 +149,11 @@ def setrun(claw_pkg='amrclaw'):
         clawdata.total_steps = 2
         clawdata.output_t0 = True  # output at initial (or restart) time?
         
+    if clawdata.restart:
+        clawdata.output_t0 = False # output at initial (or restart) time?
 
-    clawdata.output_format = 'ascii'      # 'ascii', 'binary32', 'binary64'
+    clawdata.output_format = 'binary'      # 'ascii', 'binary32', 'binary64'
+    #clawdata.output_format = 'ascii'      # 'ascii', 'binary32', 'binary64'
 
     clawdata.output_q_components = 'all'   # could be list such as [True,True]
     clawdata.output_aux_components = 'none'  # could be list
@@ -159,7 +167,7 @@ def setrun(claw_pkg='amrclaw'):
     # The current t, dt, and cfl will be printed every time step
     # at AMR levels <= verbosity.  Set verbosity = 0 for no printing.
     #   (E.g. verbosity == 2 means print only on levels 1 and 2.)
-    clawdata.verbosity = 2
+    clawdata.verbosity = 0
     
     
 
@@ -266,7 +274,8 @@ def setrun(claw_pkg='amrclaw'):
     # Specify when checkpoint files should be created that can be
     # used to restart a computation.
 
-    clawdata.checkpt_style = 0
+    clawdata.checkpt_style = 3
+    #clawdata.checkpt_style = -3
 
     if clawdata.checkpt_style == 0:
         # Do not checkpoint at all
@@ -280,10 +289,14 @@ def setrun(claw_pkg='amrclaw'):
         # Specify a list of checkpoint times.  
         clawdata.checkpt_times = [0.1,0.15]
 
-    elif clawdata.checkpt_style == 3:
+    elif abs(clawdata.checkpt_style) == 3:
         # Checkpoint every checkpt_interval timesteps (on Level 1)
         # and at the final time.
-        clawdata.checkpt_interval = 358
+        clawdata.checkpt_interval = 1000
+
+    elif clawdata.checkpt_style == 4:
+        # Checkpoint when output graphics
+        pass
 
     
 
@@ -293,16 +306,19 @@ def setrun(claw_pkg='amrclaw'):
 
     amrdata = rundata.amrdata
     #rundata.amrdata.max1d = 600
-    rundata.amrdata.max1d = 260
-    #rundata.amrdata.max1d = 160
+    #rundata.amrdata.max1d = 260
+    rundata.amrdata.max1d = 160
 
     # max number of refinement levels:
-    amrdata.amr_levels_max = 1
+    amrdata.amr_levels_max = 3
 
     # List of refinement ratios at each level (length at least amr_level_max-1)
-    amrdata.refinement_ratios_x = [2, 2]
-    amrdata.refinement_ratios_y = [2, 2]
-    amrdata.refinement_ratios_t = [2, 2]
+    #amrdata.refinement_ratios_x = [4,6]
+    #amrdata.refinement_ratios_y = [4,6]
+    #amrdata.refinement_ratios_t = [4,6]
+    amrdata.refinement_ratios_x = [4,3]
+    amrdata.refinement_ratios_y = [4,3]
+    amrdata.refinement_ratios_t = [4,3]
 
 
     # Specify type of each aux variable in clawdata.auxtype.
@@ -323,8 +339,8 @@ def setrun(claw_pkg='amrclaw'):
     # between a cell and each of its neighbors.
 
     # steps to take on each level L between regriddings of level L+1:
-    amrdata.regrid_interval = 2       
-    #amrdata.regrid_interval = 2000000       
+    #amrdata.regrid_interval = 2       
+    amrdata.regrid_interval = 2000000       
 
     # width of buffer zone around flagged points:
     # (typically the same as regrid_interval so waves don't escape):
@@ -344,8 +360,12 @@ def setrun(claw_pkg='amrclaw'):
     regions=rundata.regiondata.regions = []
     # to specify regions of refinement append lines of the form
     #  [minlevel,maxlevel,t1,t2,x1,x2,y1,y2]
-    regions.append([1,1,0,10000,0,20000,-50000,70000])
-    regions.append([2,2,0,10000,0,2500,-4000,6000])
+    regions.append([1,1,0,10000,0,20000,-40000,90000])
+    regions.append([2,2,0,10000,0,1000,-4000,9000])
+    regions.append([3,3,0,10000,0,500,-4000,9000])
+
+    regions.append([2,2,0,10000,0,5200,-200,200])
+    regions.append([3,3,0,10000,0,5000,-100,100])
 
 
     #  ----- For developers ----- 

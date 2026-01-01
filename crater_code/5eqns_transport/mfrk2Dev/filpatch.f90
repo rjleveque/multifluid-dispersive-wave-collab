@@ -306,25 +306,41 @@ recursive subroutine filrecur(level,nvar,valbig,aux,naux,t,mitot,mjtot, &
 
                  dupc = valp10 - valc
                  dumc = valc   - valm10
-                 ducc = valp10 - valm10
-                 du   = min(abs(dupc), abs(dumc))
-                 du   = min(2.d0 * du, 0.5d0 * abs(ducc))
-                 fu = max(0.d0, sign(1.d0, dupc * dumc))
-                 uslope = du*sign(1.d0,ducc)*fu ! not really - should divide by h
+                 ! commented out monotonized central
+                 !ducc = valp10 - valm10
+                 !du   = min(abs(dupc), abs(dumc))
+                 !du   = min(2.d0 * du, 0.5d0 * abs(ducc))
+                 !fu = max(0.d0, sign(1.d0, dupc * dumc))
+                 !uslope = du*sign(1.d0,ducc)*fu ! not really - should divide by h
+                 ! below is minmod
+                 if (dupc*dumc .gt. 0.d0) then
+                    uslope = sign(1.d0,dupc)*min(abs(dupc),abs(dumc))
+                 else 
+                    uslope = 0.d0
+                 endif
+                 
 
                  dvpc = valp01 - valc
                  dvmc = valc   - valm01
-                 dvcc = valp01 - valm01
-                 dv   = min(abs(dvpc), abs(dvmc))
-                 dv   = min(2.d0 * dv, 0.5d0 * abs(dvcc))
-                 fv = max(0.d0,sign(1.d0, dvpc * dvmc))
-                 vslope = dv*sign(1.d0,dvcc)*fv ! but faster to put in eta above
+                 ! below is mc
+                 !dvcc = valp01 - valm01
+                 !dv   = min(abs(dvpc), abs(dvmc))
+                 !dv   = min(2.d0 * dv, 0.5d0 * abs(dvcc))
+                 !fv = max(0.d0,sign(1.d0, dvpc * dvmc))
+                 !vslope = dv*sign(1.d0,dvcc)*fv ! but faster to put in eta above
+                 ! below is minmod
+                 if (dvpc*dvmc .gt. 0.d0) then
+                    vslope = sign(1.d0,dvpc)*min(abs(dvpc),abs(dvmc))
+                 else 
+                    vslope = 0.d0
+                 endif
+
 
                  valint = valc + eta1 * uslope + eta2 * vslope
                  ! add second derivative NOT YET LIMITED
-                 vxx = valp10 - 2.d0*valc + valm10
-                 vyy = valp01 - 2.d0*valc + valm01
-                 valint = valint + .5d0*eta1**2*vxx + .5d0*eta2**2*vyy
+                 !vxx = valp10 - 2.d0*valc + valm10
+                 !vyy = valp01 - 2.d0*valc + valm01
+                 !valint = valint + .5d0*eta1**2*vxx + .5d0*eta2**2*vyy
 
                  valbig(n,i_fine+nrowst-1,j_fine+ncolst-1) = valint
 

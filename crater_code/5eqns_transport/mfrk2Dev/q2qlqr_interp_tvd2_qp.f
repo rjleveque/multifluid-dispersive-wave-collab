@@ -3,7 +3,8 @@ c--------------------------------------------------------------------
 c
 
       subroutine q2qlqr_interp(ixy,maxm,meqn,mbc,maux,mx,
-     &           dt,dx,q1d,aux1d,ql,qr,auxl,auxr,s,wave,qp,dq)
+     &           dt,dx,q1d,aux1d,ql,qr,auxl,auxr,qp,dq)
+! removed s, wave not used
 !                uu,hh,evl,evr)
 
       use amr_module, only : mthlim, mwaves
@@ -19,8 +20,8 @@ c
       dimension dq(meqn,1-mbc:maxm+mbc)
       dimension uu(meqn,2,1-mbc:maxm+mbc)
 
-      dimension wave(1-mbc:maxm+mbc,meqn,mwaves)
-      dimension s(1-mbc:maxm+mbc,mwaves)
+      !dimension wave(1-mbc:maxm+mbc,meqn,mwaves)
+      !dimension s(mwaves,1-mbc:maxm+mbc)
 
       ! didnt change the orderings below since 
       ! dont appear to be used

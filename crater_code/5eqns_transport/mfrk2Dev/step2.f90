@@ -5,7 +5,7 @@
 !! \param gp[out] fluxes on the upper side of each horizontal edge
 
 subroutine step2(maxm,meqn,maux,mbc,mx,my,q,aux,dx,dy,dt,    &
-                 cflgrid,dq,rpn2,rpt2)
+                 cflgrid,dq,rpn2,rpt2,mptr)
 
 !
 !     clawpack routine ...  modified for AMRCLAW
@@ -22,7 +22,7 @@ subroutine step2(maxm,meqn,maux,mbc,mx,my,q,aux,dx,dy,dt,    &
     external rpn2, rpt2
     
     ! Arguments
-    integer, intent(in) :: maxm,meqn,maux,mbc,mx,my
+    integer, intent(in) :: maxm,meqn,maux,mbc,mx,my,mptr
     real(kind=8), intent(in) :: dx,dy,dt
     real(kind=8), intent(inout) :: cflgrid
     real(kind=8), intent(inout) :: q(meqn, 1-mbc:mx+mbc, 1-mbc:my+mbc)
@@ -39,8 +39,8 @@ subroutine step2(maxm,meqn,maux,mbc,mx,my,q,aux,dx,dy,dt,    &
     real(kind=8) :: dtdx1d(1-mbc:maxm+mbc)
     real(kind=8) :: dtdy1d(1-mbc:maxm+mbc)
     
-    real(kind=8) ::  wave(meqn, mwaves, 1-mbc:maxm+mbc)
-    real(kind=8) ::     s(mwaves, 1-mbc:maxm + mbc)
+    !real(kind=8) ::  wave(meqn, mwaves, 1-mbc:maxm+mbc)
+    !real(kind=8) ::     s(mwaves, 1-mbc:maxm + mbc)
     !real(kind=8) ::  amdq(meqn,1-mbc:maxm + mbc)
     !real(kind=8) ::  apdq(meqn,1-mbc:maxm + mbc)
     !real(kind=8) ::  cqxx(meqn,1-mbc:maxm + mbc)
@@ -152,6 +152,5 @@ subroutine step2(maxm,meqn,maux,mbc,mx,my,q,aux,dx,dy,dt,    &
         end do
 
     enddo
-
     return
 end subroutine step2

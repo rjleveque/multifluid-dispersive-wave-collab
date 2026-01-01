@@ -103,6 +103,7 @@ c
             endif
             enddo
          enddo
+
          debug = .false.
          if (debug) then
            write(48,*)"end of qinit"

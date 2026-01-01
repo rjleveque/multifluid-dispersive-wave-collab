@@ -31,8 +31,10 @@ c
       !dimension hh(1-mbc:maxm+mbc,-2:2)
       !dimension evl(1-mbc:maxm+mbc,meqn,mwaves)
       !dimension evr(1-mbc:maxm+mbc,meqn,mwaves)
-      dimension s(1-mbc:maxm+mbc,mwaves)
-      dimension wave(1-mbc:maxm+mbc,meqn,mwaves)
+
+      dimension s(mwaves,1-mbc:maxm+mbc)
+      ! wave no in this routine
+      dimension wave(meqn,mwaves,1-mbc:maxm+mbc)
 
       common /comxyt/ dtcom,dxcom,dycom,tcom,icom,jcom
 c
@@ -82,9 +84,9 @@ c     # higher order reconstruction
 c
       ! amdq, apdq called qp,dq, in interp routine
       call q2qlqr_interp(ixy,maxm,meqn,mbc,maux,mx,
-     &     dt,dx,q1d,aux2,ql,qr,auxl,auxr,s,wave,
+     &     dt,dx,q1d,aux2,ql,qr,auxl,auxr,
      &     amdq,apdq)
-!    !&     uu,hh,evl,evr)
+!    !&     uu,hh,evl,evr) also removed s from above 
 c
 c     # set boundary condition 
 
@@ -103,7 +105,7 @@ c
 !c
 !c     # reconstruction scheme (basis)
 !      call q2qlqr_interp(ixy,maxm,meqn,mwaves,mbc,maux,mx,
-!     &     dt,dx,q1d,aux2,ql,qr,auxl,auxr,s,wave,amdq,apdq,
+!     &     dt,dx,q1d,aux2,ql,qr,auxl,auxr,s,amdq,apdq,
 !     &     uu,hh,evl,evr,mthlim)
 !c
 !c     # THINC reconstruction (interface-sharpening)
@@ -129,8 +131,8 @@ c     # compute maximum wave speed for checking Courant number:
          do i=1,mx+1
 c           # if s>0 use dtdx1d(i) to compute CFL,
 c           # if s<0 use dtdx1d(i-1) to compute CFL:
-            cfl1d = dmax1(cfl1d, dtdx1d(i)*s(i,mw), 
-     &                          -dtdx1d(i-1)*s(i,mw))
+            cfl1d = dmax1(cfl1d, dtdx1d(i)*s(mw,i), 
+     &                          -dtdx1d(i-1)*s(mw,i))
             enddo
          enddo 
 c
@@ -150,7 +152,9 @@ c         # note that amdq2 is a total fluctuation and should be called
 c         # adq; we do it this way to save on storage
 c
           call tfluct2(ixy,maxm,meqn,mwaves,mbc,maux,mx,
-     &         ql,qr,aux2,aux2,wave,s,amdq2)
+     &         ql,qr,aux2,aux2,s,amdq2)
+c removed wave efrom calling sequence, not used
+c    &         ql,qr,aux2,aux2,wave,s,amdq2)
 c
           do m=1,meqn
              do i=1,mx
