@@ -73,8 +73,10 @@ def setplot(plotdata=None):
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes()
-    plotaxes.xlimits = 'auto'
-    plotaxes.ylimits = 'auto'
+    #plotaxes.xlimits = 'auto'
+    #plotaxes.ylimits = 'auto'
+    plotaxes.xlimits = [0,400]
+    plotaxes.ylimits = [-400,100]
     plotaxes.title = 'q(6) indicator'
     plotaxes.scaled = True      # so aspect ratio is 1
 

@@ -129,8 +129,9 @@ def setrun(claw_pkg='amrclaw'):
     if clawdata.output_style==1:
         # Output ntimes frames at equally spaced times up to tfinal:
         # Can specify num_output_times = 0 for no output
-        clawdata.num_output_times = 30
-        clawdata.tfinal = 60.0
+        clawdata.num_output_times = 10
+        #clawdata.tfinal = 60.0
+        clawdata.tfinal = 30.0
         #clawdata.num_output_times = 45
         #clawdata.tfinal = 90.0
         #clawdata.num_output_times = 60
@@ -145,8 +146,8 @@ def setrun(claw_pkg='amrclaw'):
  
     elif clawdata.output_style == 3:
         # Output every step_interval timesteps over total_steps timesteps:
-        clawdata.output_step_interval = 1
-        clawdata.total_steps = 2
+        clawdata.output_step_interval = 10
+        clawdata.total_steps = 20
         clawdata.output_t0 = True  # output at initial (or restart) time?
         
     if clawdata.restart:
@@ -310,7 +311,7 @@ def setrun(claw_pkg='amrclaw'):
     rundata.amrdata.max1d = 160
 
     # max number of refinement levels:
-    amrdata.amr_levels_max = 3
+    amrdata.amr_levels_max = 1
 
     # List of refinement ratios at each level (length at least amr_level_max-1)
     #amrdata.refinement_ratios_x = [4,6]
