@@ -21,10 +21,11 @@ from clawpack.visclaw import animation_tools
 # file name prefix obtained from this directory name:
 this_dir = os.path.split(os.getcwd())[-1]
 #file_name_prefix = this_dir + '_'
-file_name_prefix = 'compHeightAtmos300'
+file_name_prefix = 'compRes300m'
 
 # Plots directory:  (first run `make plots`)
-plotdir = 'pngs/compAtmos'
+#plotdir = 'pngs/compAtmos'
+plotdir = 'pngs/resStudy'
 
 # Search for all movie files in plotdir to determine what movies to make:
 fignos = 'all'
@@ -43,10 +44,10 @@ dpi = 200
 # Frames per second (for mp4 file only):
 fps = 6
 
-reload_images = animation_tools.read_images(plotdir, fname_pattern='compHeightAtmos300m*.png')
+reload_images = animation_tools.read_images(plotdir, fname_pattern='compRes300m*.png')
 
 anim = animation_tools.animate_images(reload_images)
-animation_tools.make_mp4(anim,file_name='heightComp.mp4',fps=fps,dpi=dpi)
+animation_tools.make_mp4(anim,file_name='compRes.mp4',fps=fps,dpi=dpi)
 
 #animation_tools.make_anim_outputs_from_plotdir(plotdir=plotdir, fignos=fignos,
 #       outputs=outputs, file_name_prefix=file_name_prefix,

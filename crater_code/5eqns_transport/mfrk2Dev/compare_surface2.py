@@ -81,7 +81,7 @@ if __name__=='__main__':
     outdirs = [outdir1, outdir2,outdir3,outdir4]
     #labels = ['6k atm','7k atm','8k atm','finer 6k']  # labels to appear in legend
     #drs = [6.6667,6.6667,6.6667, 2.2222]     
-    labels = ['h=5.0','h=3.5','h=2.5']  # labels to appear in legend
+    labels = ['h=5.0','h=3.333','h=2.5','h=2.222']  # labels to appear in legend
     drs = [5.0,3.3333333,2.5,2.22222]
     colors = ['b','r','g','m','k']  # color to plot for each outdir
 
