@@ -9,9 +9,9 @@ ion()
 # (r and z refer to x,y from 2D mfluid simulation)
 
 # define radial values r on which to compute surface:
-#rmax = 2e3
+rmax = 2e3
 #rmax = 3e3
-rmax = 20e3
+#rmax = 20e3
 #dr = 10.
 #rvals = arange(dr,rmax,dr)
 
@@ -21,7 +21,7 @@ zmax = 1000.  # any elevation in domain that's always above surface
 dz = 0.01  # needs to be pretty small
 zvals = arange(zmin, zmax, dz)
 
-def load_surface(frameno, rvals, outdir='_output', file_format='binary'):
+def load_surface2(frameno, rvals, outdir='_output', file_format='binary'):
 
     # read in the AMR solution for this time frame:
     framesoln = Solution(frameno, path=outdir, file_format=file_format)
@@ -38,24 +38,51 @@ def load_surface(frameno, rvals, outdir='_output', file_format='binary'):
     return eta
 
 
+
+def load_surface(frameno, rvals,  outdir='_output', file_format='binary'):
+    """
+    read in the mfclaw AMR solution for this time frame, interpolating
+    to the radial coordinate r values in rvals
+    """
+    from clawpack.pyclaw import Solution
+    from clawpack.visclaw import gridtools
+
+    framesoln = Solution(frameno, path=outdir, file_format=file_format)
+
+    #print(f'Loaded solution at time {framesoln.t:.3f}, computing eta...')
+
+    eta = zeros(len(rvals))  # initialize array
+
+    for i,r in enumerate(rvals):
+        ri = r*ones(len(zvals))
+        # extract zfa = q[5,:,:] on vertical transect at r=ri:
+        # (taking data from finest level that exists at each point in zvals)
+        zfa = gridtools.grid_output_2d(framesoln, 5, ri, zvals, method='linear')
+        have = (1. - zfa).sum() * dz
+        eta[i] = have + zmin
+    return eta
+
+
 if __name__=='__main__':
 
     # loop over frames as specified by framenos below
 
-    #outdir1 = 'm4to6k300mcrater_250by125_3lev46/_output'
-    #outdir2 = 'm4to6k300mcrater_500by250_3lev44/_output'
-    #outdir3 = 'm4to6k300mcrater_250by125_3lev46MoreRef/_output'
+    outdir1 = 'm4to6k300mcrater_250by125_3lev44/_output'
+    outdir2 = 'm4to6k300mcrater_250by125_3lev64/_output'
+    outdir3 = 'm4to6k300mcrater_500by250_3lev44/_output'
+    outdir4 = 'm4to6k300mcrater_250by125_3lev66/_output'
 
-    outdir1 = '_outputb'
-    outdir2 = '_outputc'
-    outdir3 = 'm4to6k300mcrater_250by125_3lev46/_output'
+    #outdir1 = '_outputa'
+    #outdir2 = '_outputb'
+    #outdir3 = '_outputc'
+    #outdir4 = 'm4to6k300mcrater_250by125_3lev66/_output'
 
     # list of outdirs to iterate over in each frame plot:
-    outdirs = [outdir1, outdir2,outdir3]
-    #labels = ['3lev46','3levfiner44','3lev46MoreRef']  # labels to appear in legend
-    #drs = [3.333333333,2.5,3.3333333]
-    labels = ['7katm','8katm','6katmFiner']  # labels to appear in legend
-    drs = [6.66667,6.667,3.3333333]
+    outdirs = [outdir1, outdir2,outdir3,outdir4]
+    #labels = ['6k atm','7k atm','8k atm','finer 6k']  # labels to appear in legend
+    #drs = [6.6667,6.6667,6.6667, 2.2222]     
+    labels = ['h=5.0','h=3.5','h=2.5']  # labels to appear in legend
+    drs = [5.0,3.3333333,2.5,2.22222]
     colors = ['b','r','g','m','k']  # color to plot for each outdir
 
     # time t for each frame in outdir1  (Assume they are the same in outdir2)
@@ -92,12 +119,13 @@ if __name__=='__main__':
         ylim(zmin,zmax)
         title(f'Frame {frameno} at time t = {t_outdir1[frameno]:.2f} seconds')
         draw()
-        fname = 'frameHeightComp%s.png'%str(frameno).zfill(4)
+        #fname = 'compHeightAtmos300m%s.png'%str(frameno).zfill(4)
+        fname = 'compRes300m%s.png'%str(frameno).zfill(4)
         savefig(fname)
         print("created ",fname)
 
-        if 1:
-        #if 0:
+        #if 1:
+        if 0:
             # interactive prompt:
             ans = input('Return for next frame, integer to jump, or q to quit... ')
             try:

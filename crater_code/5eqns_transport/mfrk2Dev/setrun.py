@@ -70,16 +70,13 @@ def setrun(claw_pkg='amrclaw'):
     clawdata.lower[0] =  0.000000e+00          # xlower
     clawdata.upper[0] = 20.000000e+03          # xupper
     clawdata.lower[1] = -4.000000e+03          # ylower
-    #clawdata.upper[1] =  7.040000e+03          # yupper
-    clawdata.upper[1] =  8.040000e+03          # yupper
+    clawdata.upper[1] =  6.000000e+03          # yupper
     
     # Number of grid cells:
     #clawdata.num_cells[0] = 500      # mx
     #clawdata.num_cells[1] = 250      # my
     clawdata.num_cells[0] = 250      # mx
-    #clawdata.num_cells[1] = 138      # my
-    clawdata.num_cells[1] = 150      # my
-
+    clawdata.num_cells[1] = 125      # my
     #clawdata.num_cells[0] = 100      # mx
     #clawdata.num_cells[1] =  50      # my
     #clawdata.num_cells[0] = 50      # mx
@@ -129,12 +126,12 @@ def setrun(claw_pkg='amrclaw'):
     if clawdata.output_style==1:
         # Output ntimes frames at equally spaced times up to tfinal:
         # Can specify num_output_times = 0 for no output
-        clawdata.num_output_times = 30
-        clawdata.tfinal = 60.0
+        #clawdata.num_output_times = 30
+        #clawdata.tfinal = 60.0
         #clawdata.num_output_times = 45
         #clawdata.tfinal = 90.0
-        #clawdata.num_output_times = 60
-        #clawdata.tfinal = 120.0
+        clawdata.num_output_times = 60
+        clawdata.tfinal = 120.0
         clawdata.output_t0 = True  # output at initial (or restart) time?
         
     elif clawdata.output_style == 2:
@@ -313,12 +310,9 @@ def setrun(claw_pkg='amrclaw'):
     amrdata.amr_levels_max = 3
 
     # List of refinement ratios at each level (length at least amr_level_max-1)
-    #amrdata.refinement_ratios_x = [4,6]
-    #amrdata.refinement_ratios_y = [4,6]
-    #amrdata.refinement_ratios_t = [4,6]
-    amrdata.refinement_ratios_x = [4,3]
-    amrdata.refinement_ratios_y = [4,3]
-    amrdata.refinement_ratios_t = [4,3]
+    amrdata.refinement_ratios_x = [6, 6]
+    amrdata.refinement_ratios_y = [6, 6]
+    amrdata.refinement_ratios_t = [6, 6]
 
 
     # Specify type of each aux variable in clawdata.auxtype.
@@ -360,9 +354,9 @@ def setrun(claw_pkg='amrclaw'):
     regions=rundata.regiondata.regions = []
     # to specify regions of refinement append lines of the form
     #  [minlevel,maxlevel,t1,t2,x1,x2,y1,y2]
-    regions.append([1,1,0,10000,0,20000,-40000,90000])
-    regions.append([2,2,0,10000,0,1000,-4000,9000])
-    regions.append([3,3,0,10000,0,500,-4000,9000])
+    regions.append([1,1,0,10000,0,20000,-40000,60000])
+    regions.append([2,2,0,10000,0,1000,-4000,6000])
+    regions.append([3,3,0,10000,0,500,-4000,6000])
 
     regions.append([2,2,0,10000,0,5200,-200,200])
     regions.append([3,3,0,10000,0,5000,-100,100])
