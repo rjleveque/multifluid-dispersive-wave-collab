@@ -22,6 +22,9 @@ Some things to adjust in this script before running this:
 
 See the comments in runclaw_makeplots_h0vals.py for more details.
 
+Also note that setrun_case.py is set for a 1-level run so this runs quickly
+for testing.
+
 ------------
 Other files:
 
