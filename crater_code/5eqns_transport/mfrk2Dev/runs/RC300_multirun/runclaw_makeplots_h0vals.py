@@ -54,8 +54,8 @@ from clawpack.clawutil import multip_tools, clawmultip_tools
 import make_cases
 
 
-#dry_run = True  # If True, only print out settings, do not run mfclaw
-dry_run = False  # If True, only print out settings, do not run mfclaw
+dry_run = True  # If True, only print out settings, do not run mfclaw
+#dry_run = False  # If True, only print out settings, do not run mfclaw
 
 # what to do:
 run_code = False
