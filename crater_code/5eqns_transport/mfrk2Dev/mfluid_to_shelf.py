@@ -1,3 +1,7 @@
+"""
+mfluid_to_shelf with mfrk2Dev AMR output
+"""
+
 from pylab import *
 import os,sys
 from scipy.interpolate import interp1d
@@ -31,7 +35,7 @@ AGT = os.environ['AGT']
 LW = fullpath_import(os.path.join(AGT, 'linear_transforms', 'linear_waves.py'))
 
 # directory for mfluid simulation data used to initialize:
-outdir_mfluid = 'RC1000_small/_output_40m_100km_t600'
+outdir_mfluid = 'RC300/_output'
 
 # directory for saving boundary conditions time series:
 savefile_dir = './BC'
@@ -52,14 +56,56 @@ xupper = 200e3  # at least as large as rAiry_end, how much larger??
 savefile_name = 'eta_hu_bc_RC%i_h%s_tstart%i_rbc%ikm' \
     % (int(RC), int(h0), int(tAiry_start), int(rAiry_end/1000))
 
+# vertical z values on which to evaluate 2D solution for computing surface:
+zmin = -900. # any depth in domain that's always below surface
+zmax = 1000.  # any elevation in domain that's always above surface
+dz = 1  #0.01  # needs to be pretty small
+zvals = arange(zmin, zmax, dz)
 
 grav = 9.81
 
 print('outdir_mfluid = ',outdir_mfluid)
-tf_mfluid, find_frame_mfluid = C.load_times_mfluid(outdir_mfluid)
+#tf_mfluid, find_frame_mfluid = C.load_times_mfluid(outdir_mfluid)
+
+def load_times_mfluid(outdir):
+    print('+++ outdir = ',outdir)
+    fortt_files = glob.glob('%s/fort.t*' % outdir)
+    fortt_files.sort()
+    fortt_files = [f for f in fortt_files if 'tck' not in f]
+    #print(fortt_files)
+    if len(fortt_files) == 0:
+        raise IOError('No fort.t files found in ',outdir)
+    times = []
+    for f in fortt_files:
+        frameno = int(f[-4:])
+        t = float(open(f).readline().split()[0])
+        times.append((frameno,float(round(t,1))))
+    tf = array(times)
+
+    def find_frame(time):
+        """
+        find frameno for best match to time
+        """
+        if time < tf[0,1]:
+            k = 0
+        else:
+            k = where(tf[:,1] < time+1e-6)[0].max()
+            #print('+++ k = %i' % k, '   tf[k:k+2, :] = ',tf[k:k+2, :])
+            if (k < tf.shape[0]-1):
+                if (tf[k+1,1] - time) < (time - tf[k,1]):
+                    k = k+1
+        return int(tf[k,0])
+
+    print('Found %i mfluid frames up to time %.1f seconds' \
+                % (tf.shape[0], tf[:,1].max()))
+
+    return tf, find_frame
+
+tf_mfluid, find_frame_mfluid = load_times_mfluid(outdir_mfluid)
 
 def load_mfluid(frameno):
     """
+    OLD
     load frame of mfluid solution from Keh-Ming's code, surface in fort.c*
     """
     fname = outdir_mfluid + '/fort.c%s' % str(frameno).zfill(4)
@@ -69,6 +115,52 @@ def load_mfluid(frameno):
     eta_mfluid = d[:,2] - h0
     u_mfluid = d[:,1]
     return r_mfluid, eta_mfluid, u_mfluid
+
+def load_surface(frameno, outdir='_output', file_format='binary'):
+    """
+    read in the mfclaw AMR solution for this time frame, interpolating
+    to the radial coordinate r values in rvals
+    """
+    from clawpack.pyclaw import Solution
+    from clawpack.visclaw import gridtools
+    from clawpack.clawutil.data import ClawData
+
+    clawdata = ClawData()
+    clawdata.read('_output/claw.data',force=True)
+    amrdata = ClawData()
+    amrdata.read('_output/amr.data',force=True)
+
+    rmax = clawdata.upper[0]
+    num_cells_r_fine = clawdata.num_cells[0] * \
+              prod(amrdata.refinement_ratios_x[:(amrdata.amr_levels_max-1)])
+    dr_fine = rmax / num_cells_r_fine
+    rvals = arange(0,rmax,dr_fine)
+    print(f'rmax = {rmax}, dr_fine = {dr_fine}, len(rvals) = {len(rvals)}')
+
+    framesoln = Solution(frameno, path=outdir, file_format=file_format)
+
+    #print(f'Loaded solution at time {framesoln.t:.3f}, computing eta...')
+
+    eta = zeros(len(rvals))  # initialize array
+
+    for i,r in enumerate(rvals):
+        ri = r*ones(len(zvals))
+        # extract zfa = q[5,:,:] on vertical transect at r=ri:
+        # (taking data from finest level that exists at each point in zvals)
+        zfa = gridtools.grid_output_2d(framesoln, 5, ri, zvals, method='linear')
+
+        tol = 1e-5
+        k1 = where(zfa > tol)[0].min()
+        k2 = where(zfa < 1-tol)[0].max()
+        dz_fine = 0.01
+        zvals_fine = arange(zvals[k1], zvals[k2], dz_fine)
+        print(f'zvals_fine has length {len(zvals2)} from z={zvals[k1]:.1f} to z = {zvals[k2]:.1f}')
+
+        zfa = gridtools.grid_output_2d(framesoln, 5, ri, zvals2, method='linear')
+        have = (1. - zfa).sum() * dz
+        eta[i] = have + zmin
+    return eta
+
 
 def save_eta_u(t, r, eta, u, fname):
     """
@@ -108,8 +200,11 @@ def make_Airy_data(tAiry_start, r=r, k=k):
     # (or frame that is closest to specified time)
     frameno_mfluid = find_frame_mfluid(tAiry_start)
 
-    rkm_mfluid, eta_mfluid, u_mfluid, t_mfluid = \
-                    C.load_mfluid(outdir_mfluid, frameno_mfluid, h0)
+    #rkm_mfluid, eta_mfluid, u_mfluid, t_mfluid = \
+    #                C.load_mfluid(outdir_mfluid, frameno_mfluid, h0)
+
+    eta_mfluid, t_mfluid = load_surface(frameno_mfluid, r, outdir_mfluid)
+
 
     if t_mfluid != tAiry_start:
         print('Resetting tAiry_start from %s to %s' % (tAiry_start,t_mfluid))
