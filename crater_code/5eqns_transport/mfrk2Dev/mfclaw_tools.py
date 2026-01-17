@@ -83,10 +83,11 @@ def load_times_mfclaw(outdir):
                     k = k+1
         return int(tf[k,0])
 
-    print('Found %i mfluid frames up to time %.1f seconds' \
+    print('Found %i mfclaw frames up to time %.1f seconds' \
                 % (tf.shape[0], tf[:,1].max()))
 
     return tf, find_frame
+
 
 
 def load_surface(frameno, outdir='_output', file_format='binary'):
@@ -110,7 +111,8 @@ def load_surface(frameno, outdir='_output', file_format='binary'):
               prod(amrdata.refinement_ratios_x[:(amrdata.amr_levels_max-1)])
     dr_fine = rmax / num_cells_r_fine
     rvals = arange(0.5*dr_fine, rmax, dr_fine)  # grid at this resolution dr_fine
-    print(f'rmax = {rmax}, dr_fine = {dr_fine}, len(rvals) = {len(rvals)}')
+    print(f'For frameno={frameno} from {outdir}:')
+    print(f'    rmax = {rmax}, dr_fine = {dr_fine}, len(rvals) = {len(rvals)}')
 
     # load AMR solution:
     framesoln = Solution(frameno, path=outdir, file_format=file_format)
@@ -158,7 +160,101 @@ def load_surface(frameno, outdir='_output', file_format='binary'):
         eta_lowerbound[i] = zvals_fine[0]
         eta_upperbound[i] = zvals_fine[-1]
 
-    if 1:
+
+    if 0:
+        # for debugging return lower and upper limits of zvals_fine too:
+        return rvals, eta, eta_lowerbound, eta_upperbound
+    else:
+        return rvals, eta
+
+
+def load_surface_fromtop(frameno, outdir='_output', file_format='binary'):
+    """
+    Read in the mfclaw AMR solution for this time frame, interpolating
+    to the radial coordinate r values determined by the finest grid resolution
+    in this run (based on level 1 dx and refinement ratios).
+
+    Version that sums from top down rather than bottom up, maybe different
+    results if there are bubbles near the axis?
+    """
+
+    try:
+        clawdata = ClawData()
+        clawdata.read(f'{outdir}/claw.data',force=True)
+        amrdata = ClawData()
+        amrdata.read(f'{outdir}/amr.data',force=True)
+
+        h0 = -clawdata.lower[1]     # ocean depth
+        zupper = clawdata.upper[1]  # top of atmosphere
+        rmax = clawdata.upper[0]    # right boundary
+
+        # determine finest AMR resolution dr_fine:
+        num_cells_r_fine = clawdata.num_cells[0] * \
+                  prod(amrdata.refinement_ratios_x[:(amrdata.amr_levels_max-1)])
+        dr_fine = rmax / num_cells_r_fine
+    except:
+        print('*** could not load from claw.data, amr.data')
+        dr_fine = 50.
+        h0 = -4000.
+        zupper = 6000.
+        rmax = 6000.
+
+    rvals = arange(0.5*dr_fine, rmax, dr_fine)  # grid at this resolution dr_fine
+    print(f'rmax = {rmax}, dr_fine = {dr_fine}, len(rvals) = {len(rvals)}')
+
+    # load AMR solution:
+    framesoln = Solution(frameno, path=outdir, file_format=file_format)
+
+    print(f'Loaded solution at time {framesoln.t:.3f}, computing eta...')
+
+    eta = zeros(len(rvals))  # initialize array
+    eta_lowerbound = zeros(len(rvals))
+    eta_upperbound = zeros(len(rvals))
+
+    dz_coarse = 10.
+    zvals_coarse = arange(-h0+dz_coarse/2, zupper, dz_coarse)
+
+    for i,r in enumerate(rvals):
+        ri_coarse = r*ones(len(zvals_coarse))
+
+        # first find indicator zfa = q[5,:,:] on coarse grid in z:
+        zfa_coarse = gridtools.grid_output_2d(framesoln, 5, ri_coarse,
+                                              zvals_coarse, method='linear')
+
+        # determine range of z over which zfa is varying between 0 and 1:
+        tol = 1e-5
+        k1 = where(zfa_coarse <= tol)[0].max()  # topmost pure water cell
+        k2 = where(zfa_coarse < 1-tol)[0].max() # topmost pure air cell
+        if k2 <= k1:
+            k1 = k1 - 1
+            k2 = k2 + 1
+
+        #print(f'+++ k1={k1}, k2={k2}')
+
+        # now evaluate zfa on fine grid in z between these limits:
+        dz_fine = 0.01
+        zvals_fine = arange(zvals_coarse[k1], zvals_coarse[k2], dz_fine)
+        ri_fine = r*ones(len(zvals_fine))
+        #print(f'zvals_fine has length {len(zvals_fine)} from z={zvals_fine[0]:.1f} to z = {zvals_fine[-1]:.1f}')
+
+        zfa = gridtools.grid_output_2d(framesoln, 5, ri_fine,
+                                       zvals_fine, method='linear')
+
+        # integrate the indicator function that is 0 in water, 1 in air
+        # to estimate location of interface:
+
+        # from bottom:
+        #have = (1. - zfa).sum() * dz_fine
+        #eta[i] = have + zvals_fine[0]
+
+        # from top:
+        have = zfa.sum() * dz_fine
+        eta[i] = zvals_fine[-1] - have
+
+        eta_lowerbound[i] = zvals_fine[0]
+        eta_upperbound[i] = zvals_fine[-1]
+
+    if 0:
         # for debugging return lower and upper limits of zvals_fine too:
         return rvals, eta, eta_lowerbound, eta_upperbound
     else:
@@ -166,6 +262,10 @@ def load_surface(frameno, outdir='_output', file_format='binary'):
 
 
 def plotzfa(frameno, r, outdir='_output', file_format='binary'):
+    """
+    For debugging, plot zfa indicator as function of z at specified r
+    """
+
     figure(2)
     clf()
     framesoln = Solution(frameno, path=outdir, file_format=file_format)
