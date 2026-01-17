@@ -1,0 +1,26 @@
+2                    ! nlayer
+1.4     4.4          ! (geos(i),i=1,nlayer)
+0.0     0.0          ! (an(i),i=1,nlayer)
+0.0     6.0d8        ! (bn(i),i=1,nlayer)
+0.0     0.0          ! (cn(i),i=1,nlayer)
+0.0     0.d0         ! (dn(i),i=1,nlayer)
+0.0     0.0          ! (en(i),i=1,nlayer)
+0.0     0.0          ! (cv(i),i=1,nlayer)
+1.225d0 1.0d3        ! (rref(i),i=1,nlayer)
+0.0     0.0          ! (tref(i),i=1,nlayer)
+0.0     0.0          ! (pcav(i),i=1,nlayer)
+1.0d-8  1.0d-8       ! (zf(i),i=1,nlayer)
+1.0d-8  1.0d-8       ! (zv(i),i=1,nlayer)
+0.0 0.0 0.0 0.0      ! den0,velx0,vely0,pr0
+0.0  0.0 0.0 0.0     ! xloop(1),yloop(1),zloop(1),rloop(1)
+0.0  0.0 0.0 0.0     ! xloop(2),yloop(2),zloop(2),rloop(2)
+9.81                 ! grav
+300.0                ! RC = inner radius
+300.0                ! RD = outer radius
+300.0                ! DC used in Figure 5, from Table 1 not 2*RC/3
+T                    ! smoothed -- use Gaussian smoothing?
+3520.0               ! r1 used for Gaussian smoothing of lip
+600.0                ! rdecay used for Gaussian smoothing of lip
+1                    ! linfactor to scale DC for linearization
+2.3d0                ! thinc_beta
+1.0d-5               ! vofmin
