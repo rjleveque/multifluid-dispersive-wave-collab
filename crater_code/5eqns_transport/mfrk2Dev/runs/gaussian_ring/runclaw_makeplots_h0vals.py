@@ -108,7 +108,7 @@ else:
 
 # Specify the list of h0 values to loop over for mfclaw runs:
 
-h0vals = [1000]
+h0vals = [1000,500,1500]
 
 
 

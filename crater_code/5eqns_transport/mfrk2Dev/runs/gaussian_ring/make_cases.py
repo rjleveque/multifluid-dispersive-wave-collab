@@ -61,7 +61,7 @@ def make_all_cases_h0(runs_dir, xmfclaw_path, make_plots, h0vals):
 
         # parameter(s) that vary:
         case['h0'] = h0
-        case['xupper'] = 10e3  # fixed for this set of cases
+        case['xupper'] = 20e3  # fixed for this set of cases
         case['yupper'] = 2e3   # fixed for this set of cases
 
         if make_plots:

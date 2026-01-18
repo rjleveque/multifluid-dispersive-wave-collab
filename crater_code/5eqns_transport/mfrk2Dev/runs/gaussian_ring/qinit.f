@@ -16,6 +16,7 @@ c
       common /phypar/ den0,velx0,vely0,velz0,pr0
       common /cgrav/ grav
       common /crater_info/ RC,RD,DC,r1,rdecay,linfactor
+      common /ring_info/ r_ring, w_ring, ampl_ring
 
       dimension q(meqn,1-mbc:mx+mbc,1-mbc:my+mbc)
       dimension aux(maux,1-mbc:mx+mbc,1-mbc:my+mbc)
@@ -23,6 +24,10 @@ c
       dimension qloc(20)
       logical debug 
 
+c     # Gaussian ring:
+      r_ring = 2000.d0
+      w_ring = 500.d0
+      ampl_ring = 100.d0
 c
 c     # astroid impact problem         
 c
@@ -122,8 +127,7 @@ c     # cavity: hydrostatic pressure readjustment
       do i=1-mbc,mx+mbc
          xlow = xlower+dble(i-1)*dx
          !if (xlow+0.5d0*dx .lt. RC) then
-         ! FIX for ring:
-         if (abs(xlow+0.5d0*dx - 1000.d0) < 500.d0) then
+         if (abs(xlow+0.5d0*dx - r_ring) < 5.d0*w_ring) then
              do j=my+mbc,1-mbc,-1
                 ylow = ylower+dble(j-1)*dy
                 call cellave(xlow,ylow,dx,dy,wlin)
@@ -180,6 +184,7 @@ c
       implicit double precision (a-h,o-z)
       real(kind=8) :: r_ring, w_ring, eta_ring, ampl_ring
       common /cominit3/ x0,y0,z0,r0,jfront
+      common /ring_info/ r_ring, w_ring, ampl_ring
 c
 c     # gaussian ring
 c
@@ -188,9 +193,6 @@ c         # flat air-water interface
 c
           fdisc_local = z-z0
       else
-          r_ring = 1000.d0
-          w_ring = 100.d0
-          ampl_ring = 100.d0
           if (abs(r - r_ring) > 5.d0*w_ring) then
             eta_ring = 0.d0
           else

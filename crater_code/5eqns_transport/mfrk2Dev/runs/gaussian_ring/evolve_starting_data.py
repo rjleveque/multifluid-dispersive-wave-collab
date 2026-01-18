@@ -1,5 +1,8 @@
 """
-Not yet updated to mfclaw or radial ring
+Comparison of mfclaw results with Airy solution for initial data consisting
+of a radial Gaussian ring.
+
+Using AMR results computed with mfclaw and Hankel function Airy solution.
 """
 
 import sys
@@ -38,13 +41,19 @@ LW = fullpath_import(os.path.join(AGT, 'linear_transforms','linear_waves.py'))
 mfclaw_tools = fullpath_import(f'{root_dir}/mfrk2Dev/mfclaw_tools.py')
 
 
-xlower = 0; xupper = 10e3; h0 = 1000.
+xlower = 0
+xupper = 20e3
+h0 = 1500.  # Note: also used to set outdir below
+
 # Initial eta and u
 L = xupper - xlower
-mx_H1 = 1200
+mx_H1 = 2000
 dx = L/mx_H1
 r = linspace(dx/2, xupper-dx/2, mx_H1)
-k = linspace(1e-6,0.05,4000)
+w_ring = 500
+kmax = 1.5 * 2*pi/w_ring
+mk = mx_H1 * 2  # better choice?
+k = linspace(1e-6,kmax,mk)
 
 if 0:
     # wave packet:
@@ -53,7 +62,7 @@ if 0:
 
 #starting_data = loadtxt('starting.data',skiprows=2)
 
-outdir = 'mfclaw_outputs/_output_h0_1000'
+outdir = f'mfclaw_outputs/_output_h0_{h0:04.0f}'
 #tf_mfclaw, find_frame_mfclaw = C.load_times_mfclaw(outdir)
 tf_mfclaw, find_frame_mfclaw = mfclaw_tools.load_times_mfclaw(outdir)
 
@@ -80,8 +89,8 @@ eta0hat = LW.Htransform(r,eta0,k)
 omega = lambda k: LW.omega_airy(k,h0)
 reval = r
 
-if 0:
-    figure(3, figsize=(9,5))
+if 1:
+    figure(33, figsize=(9,5))
     clf()
     plot(k, eta0hat, 'k')
     xlabel('wavenumber k')
@@ -164,13 +173,14 @@ def update(t):
 if __name__ == '__main__':
 
     print('Making anim...')
-    #times = tf_mfclaw[:,1]
-    times = [0, 30, 60]
+    times = tf_mfclaw[:,1]
+    #times = [0, 5,10]
     anim = animation.FuncAnimation(fig, update, frames=times,
                                    interval=200, blit=False)
 
     # Output files:
-    name = 'Gaussian_AirySwitch_t%s' % str(t0airy).zfill(3)
+    #name = 'Gaussian_AirySwitch_t%s' % str(t0airy).zfill(3)
+    name = f'Gaussian_Airy_depth{h0:04.0f}'
 
     fname_mp4 = name + '.mp4'
 

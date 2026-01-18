@@ -140,8 +140,8 @@ def setrun(claw_pkg='amrclaw', case={}):
     if clawdata.output_style==1:
         # Output ntimes frames at equally spaced times up to tfinal:
         # Can specify num_output_times = 0 for no output
-        clawdata.num_output_times = 30
-        clawdata.tfinal = 60.0
+        clawdata.num_output_times = 60
+        clawdata.tfinal = 120.0
         #clawdata.num_output_times = 45
         #clawdata.tfinal = 90.0
         #clawdata.num_output_times = 1
@@ -321,7 +321,7 @@ def setrun(claw_pkg='amrclaw', case={}):
     rundata.amrdata.max1d = 160
 
     # max number of refinement levels:
-    amrdata.amr_levels_max = 2
+    amrdata.amr_levels_max = 3
 
     # List of refinement ratios at each level (length at least amr_level_max-1)
     amrdata.refinement_ratios_x = [6, 4]
