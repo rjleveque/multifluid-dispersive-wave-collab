@@ -48,7 +48,7 @@ def setplot(plotdata=None):
         plotaxes = plotfigure.new_plotaxes()
         plotaxes.xlimits = 'auto'
         plotaxes.ylimits = 'auto'
-        #plotaxes.xlimits = [0,2000]   
+        #plotaxes.xlimits = [0,2000]
         #plotaxes.ylimits = [-2100,2100]
         plotaxes.title = f'q({m+1} ) '
         plotaxes.scaled = True      # so aspect ratio is 1
@@ -118,6 +118,7 @@ def setplot(plotdata=None):
         # compute have as in Keh-Mings out1.f:
         #have = (1-zfa).sum(axis=1) * dy   # sum up in y
         have = nan*zfa[:,0]  # all nan to start
+        print(f'+++ level = {level}, r[-1] = {r[-1]}')
         for j in range(len(r)):
             #if (zfa[j,:].min() < 1e-6) and (zfa[j,:].max() > 0.9):
             if (zfa[j,:].min() < 0.5) and (zfa[j,:].max() > 0.5):
@@ -146,7 +147,7 @@ def setplot(plotdata=None):
     plotitem.plotstyle = 'bo-'
     plotitem.kwargs = {'markersize':3}
     #plotitem.color = 'b'
-    plotitem.amr_data_show = [1,0]  # which levels to plot data
+    plotitem.amr_data_show = [1,0,0]  # which levels to plot data
 
     # Set up for item on these axes: scatter of 2d data
     plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
@@ -154,7 +155,7 @@ def setplot(plotdata=None):
     #plotitem.plot_var = 0
     plotitem.plotstyle = '-'
     plotitem.color = 'r'
-    plotitem.amr_data_show = [0,1]  # which levels to plot data
+    plotitem.amr_data_show = [0,1,0]  # which levels to plot data
 
     # Set up for item on these axes: scatter of 2d data
     plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
@@ -164,6 +165,15 @@ def setplot(plotdata=None):
     plotitem.color = 'g'
     plotitem.amr_data_show = [0,0,1]  # which levels to plot data
 
+    def plot_surface(current_data):
+        # plot by extracting vertical transect from all levels:
+        from mfclaw_tools import load_surface
+        from pylab import plot, fill_between
+        r,eta = load_surface(current_data.frameno, plotdata.outdir)
+        #fill_between(r, eta1, eta2, [0.9,0.9,0.9])
+        plot(r, eta, 'k')
+
+    plotaxes.afteraxes = plot_surface
 
     #-----------------------------------------
     # Figures for gauges
