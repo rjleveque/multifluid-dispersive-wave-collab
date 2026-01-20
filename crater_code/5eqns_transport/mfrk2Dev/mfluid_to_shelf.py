@@ -3,7 +3,7 @@ mfluid_to_shelf with mfrk2Dev AMR output
 """
 
 from pylab import *
-import os,sys
+import os,sys,glob
 from scipy.interpolate import interp1d
 
 root_dir = '/Users/rjl/git/Forks/multifluid-dispersive-wave-collab/crater_code/5eqns_transport/'
@@ -29,6 +29,8 @@ except:
         print('loaded module from file: ',module.__file__)
         return module
 
+mfclaw_tools = fullpath_import(f'{root_dir}/mfrk2Dev/mfclaw_tools.py')
+
 C = fullpath_import(os.path.join(root_dir, 'compareALE3D.py'))
 
 AGT = os.environ['AGT']
@@ -37,129 +39,33 @@ LW = fullpath_import(os.path.join(AGT, 'linear_transforms', 'linear_waves.py'))
 # directory for mfluid simulation data used to initialize:
 outdir_mfluid = 'RC300/_output'
 
-# directory for saving boundary conditions time series:
-savefile_dir = './BC'
-os.system('mkdir -p %s' % savefile_dir)
-
 h0 = 4000.
-RC = 1000.
-tAiry_start = 300.   # initial eta(r,t) from mfluid solution at this time
-tAiry_end = 7200.    # compute up to this time
-rAiry_end = 200e3    # capture the solution eta(r,t) as fcn of t at this
+RC = 300.
+tAiry_start = 60.   # initial eta(r,t) from mfluid solution at this time
+tAiry_end = 3600.    # compute up to this time
+rAiry_end = 100e3    # capture the solution eta(r,t) as fcn of t at this r
 
 # domain for computing radial Hankel solution:
 xlower = 0
-xupper = 200e3  # at least as large as rAiry_end, how much larger??
+xupper = 120e3  # at least as large as rAiry_end, how much larger??
+
+# directory for saving boundary conditions time series:
+savefile_dir = './BC'
+os.system('mkdir -p %s' % savefile_dir)
 
 # file for saving time series of eta and u (for SWE and Bouss) at rAiry_end:
 # (will be saved in directory savefile_dir)
 savefile_name = 'eta_hu_bc_RC%i_h%s_tstart%i_rbc%ikm' \
     % (int(RC), int(h0), int(tAiry_start), int(rAiry_end/1000))
 
-# vertical z values on which to evaluate 2D solution for computing surface:
-zmin = -900. # any depth in domain that's always below surface
-zmax = 1000.  # any elevation in domain that's always above surface
-dz = 1  #0.01  # needs to be pretty small
-zvals = arange(zmin, zmax, dz)
 
 grav = 9.81
 
 print('outdir_mfluid = ',outdir_mfluid)
 #tf_mfluid, find_frame_mfluid = C.load_times_mfluid(outdir_mfluid)
 
-def load_times_mfluid(outdir):
-    print('+++ outdir = ',outdir)
-    fortt_files = glob.glob('%s/fort.t*' % outdir)
-    fortt_files.sort()
-    fortt_files = [f for f in fortt_files if 'tck' not in f]
-    #print(fortt_files)
-    if len(fortt_files) == 0:
-        raise IOError('No fort.t files found in ',outdir)
-    times = []
-    for f in fortt_files:
-        frameno = int(f[-4:])
-        t = float(open(f).readline().split()[0])
-        times.append((frameno,float(round(t,1))))
-    tf = array(times)
 
-    def find_frame(time):
-        """
-        find frameno for best match to time
-        """
-        if time < tf[0,1]:
-            k = 0
-        else:
-            k = where(tf[:,1] < time+1e-6)[0].max()
-            #print('+++ k = %i' % k, '   tf[k:k+2, :] = ',tf[k:k+2, :])
-            if (k < tf.shape[0]-1):
-                if (tf[k+1,1] - time) < (time - tf[k,1]):
-                    k = k+1
-        return int(tf[k,0])
-
-    print('Found %i mfluid frames up to time %.1f seconds' \
-                % (tf.shape[0], tf[:,1].max()))
-
-    return tf, find_frame
-
-tf_mfluid, find_frame_mfluid = load_times_mfluid(outdir_mfluid)
-
-def load_mfluid(frameno):
-    """
-    OLD
-    load frame of mfluid solution from Keh-Ming's code, surface in fort.c*
-    """
-    fname = outdir_mfluid + '/fort.c%s' % str(frameno).zfill(4)
-    print('Loading ',fname)
-    d = loadtxt(fname)
-    r_mfluid = d[:,0]
-    eta_mfluid = d[:,2] - h0
-    u_mfluid = d[:,1]
-    return r_mfluid, eta_mfluid, u_mfluid
-
-def load_surface(frameno, outdir='_output', file_format='binary'):
-    """
-    read in the mfclaw AMR solution for this time frame, interpolating
-    to the radial coordinate r values in rvals
-    """
-    from clawpack.pyclaw import Solution
-    from clawpack.visclaw import gridtools
-    from clawpack.clawutil.data import ClawData
-
-    clawdata = ClawData()
-    clawdata.read('_output/claw.data',force=True)
-    amrdata = ClawData()
-    amrdata.read('_output/amr.data',force=True)
-
-    rmax = clawdata.upper[0]
-    num_cells_r_fine = clawdata.num_cells[0] * \
-              prod(amrdata.refinement_ratios_x[:(amrdata.amr_levels_max-1)])
-    dr_fine = rmax / num_cells_r_fine
-    rvals = arange(0,rmax,dr_fine)
-    print(f'rmax = {rmax}, dr_fine = {dr_fine}, len(rvals) = {len(rvals)}')
-
-    framesoln = Solution(frameno, path=outdir, file_format=file_format)
-
-    #print(f'Loaded solution at time {framesoln.t:.3f}, computing eta...')
-
-    eta = zeros(len(rvals))  # initialize array
-
-    for i,r in enumerate(rvals):
-        ri = r*ones(len(zvals))
-        # extract zfa = q[5,:,:] on vertical transect at r=ri:
-        # (taking data from finest level that exists at each point in zvals)
-        zfa = gridtools.grid_output_2d(framesoln, 5, ri, zvals, method='linear')
-
-        tol = 1e-5
-        k1 = where(zfa > tol)[0].min()
-        k2 = where(zfa < 1-tol)[0].max()
-        dz_fine = 0.01
-        zvals_fine = arange(zvals[k1], zvals[k2], dz_fine)
-        print(f'zvals_fine has length {len(zvals2)} from z={zvals[k1]:.1f} to z = {zvals[k2]:.1f}')
-
-        zfa = gridtools.grid_output_2d(framesoln, 5, ri, zvals2, method='linear')
-        have = (1. - zfa).sum() * dz
-        eta[i] = have + zmin
-    return eta
+tf_mfluid, find_frame_mfluid = mfclaw_tools.load_times_mfclaw(outdir_mfluid)
 
 
 def save_eta_u(t, r, eta, u, fname):
@@ -178,7 +84,10 @@ mk = 4000  # Is this large enough?  How to choose?
 
 dx = L/mx
 r = linspace(dx/2, xupper-dx/2, mx)
-k = linspace(1e-6,0.005,mk)
+
+kmax = 1.5 * 2*pi/RC
+k = linspace(1e-6,kmax,mk)
+#k = linspace(1e-6,0.005,mk)
 
 def make_Airy_data(tAiry_start, r=r, k=k):
     """
@@ -203,13 +112,15 @@ def make_Airy_data(tAiry_start, r=r, k=k):
     #rkm_mfluid, eta_mfluid, u_mfluid, t_mfluid = \
     #                C.load_mfluid(outdir_mfluid, frameno_mfluid, h0)
 
-    eta_mfluid, t_mfluid = load_surface(frameno_mfluid, r, outdir_mfluid)
+    r_mfluid, eta_mfluid = mfclaw_tools.load_surface(frameno_mfluid,
+                                                     outdir_mfluid)
 
 
-    if t_mfluid != tAiry_start:
-        print('Resetting tAiry_start from %s to %s' % (tAiry_start,t_mfluid))
-        tAiry_start = t_mfluid
-    r_mfluid = rkm_mfluid * 1000.  # convert from km to m
+    if 0:
+        if t_mfluid != tAiry_start:
+            print('Resetting tAiry_start from %s to %s' % (tAiry_start,t_mfluid))
+            tAiry_start = t_mfluid
+        r_mfluid = rkm_mfluid * 1000.  # convert from km to m
 
     if 0:
         # damp out near origin:
@@ -226,26 +137,14 @@ def make_Airy_data(tAiry_start, r=r, k=k):
             % (r[-1],dx))
     etafcn = interp1d(r_mfluid, eta_mfluid, fill_value=0., bounds_error=False)
     eta = etafcn(r)
-    ufcn = interp1d(r_mfluid, u_mfluid, fill_value=0., bounds_error=False)
-    u = ufcn(r)  # not needed?
+    #ufcn = interp1d(r_mfluid, u_mfluid, fill_value=0., bounds_error=False)
+    #u = ufcn(r)  # not needed?
 
     # Also need to damp out for large r since mfluid soln may not fully decay?
 
     print('Computing Hankel transform...')
     etahat = LW.Htransform(r,eta,k)
 
-    if 0:
-        # NOT WORKING since etathat is complex
-        d = vstack((k,etahat_mfluid)).T
-        fname = 'etahat_mfluid_t%s.txt' % t
-        savetxt(fname,d)
-        print('Created ',fname)
-    return eta, etahat, u
-
-def load_etahat_mfluid(fname):
-    # NOT WORKING since etathat is complex
-    k,etahat_mfluid = loadtxt(fname, unpack=True)
-    return k, etahat_mfluid
 
 def evolve_Airy(etahat,tAiry_start,tAiry_end,k=k,r=r):
     """
@@ -440,8 +339,7 @@ def plot_etahat(k, etahat, t_etahat, save_png=False):
 
 if __name__ == '__main__':
 
-    eta_start, etahat_start, u_start = make_Airy_data(tAiry_start=tAiry_start,
-                                                      r=r, k=k)
+    eta_start, etahat_start = make_Airy_data(tAiry_start=tAiry_start, r=r, k=k)
 
     plot_etahat(k, etahat_start, tAiry_start, save_png=True)
 
