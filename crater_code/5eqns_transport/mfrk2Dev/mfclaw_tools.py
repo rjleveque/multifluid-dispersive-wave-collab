@@ -81,7 +81,7 @@ def load_times_mfclaw(outdir):
             if (k < tf.shape[0]-1):
                 if (tf[k+1,1] - time) < (time - tf[k,1]):
                     k = k+1
-        return int(tf[k,0])
+        return int(tf[k,0]), tf[k,1]  # also return time of this frame
 
     print('Found %i mfclaw frames up to time %.1f seconds' \
                 % (tf.shape[0], tf[:,1].max()))
@@ -90,11 +90,15 @@ def load_times_mfclaw(outdir):
 
 
 
-def load_surface(frameno, outdir='_output', file_format='binary'):
+def load_surface(frameno, outdir='_output', file_format='binary', rmax=inf):
     """
     Read in the mfclaw AMR solution for this time frame, interpolating
     to the radial coordinate r values determined by the finest grid resolution
     in this run (based on level 1 dx and refinement ratios).
+
+    rmax is optional upper bound on r of interest,
+         if inf, use clawdata.upper[0], the right boundary of the domain
+         and in any case replace rmax by min(rmax, clawdata.upper[0])
     """
 
     clawdata = ClawData()
@@ -104,12 +108,13 @@ def load_surface(frameno, outdir='_output', file_format='binary'):
 
     h0 = -clawdata.lower[1]     # ocean depth
     zupper = clawdata.upper[1]  # top of atmosphere
-    rmax = clawdata.upper[0]    # right boundary
+    print(f'load_surface called with rmax = {rmax}')
+    rmax = min(rmax, clawdata.upper[0])    # don't go past right boundary
 
     # determine finest AMR resolution dr_fine:
     num_cells_r_fine = clawdata.num_cells[0] * \
               prod(amrdata.refinement_ratios_x[:(amrdata.amr_levels_max-1)])
-    dr_fine = rmax / num_cells_r_fine
+    dr_fine = clawdata.upper[0] / num_cells_r_fine
     rvals = arange(0.5*dr_fine, rmax, dr_fine)  # grid at this resolution dr_fine
     print(f'For frameno={frameno} from {outdir}:')
     print(f'    rmax = {rmax}, dr_fine = {dr_fine}, len(rvals) = {len(rvals)}')
