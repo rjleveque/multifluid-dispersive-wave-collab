@@ -118,7 +118,7 @@ def setplot(plotdata=None):
         # compute have as in Keh-Mings out1.f:
         #have = (1-zfa).sum(axis=1) * dy   # sum up in y
         have = nan*zfa[:,0]  # all nan to start
-        print(f'+++ level = {level}, r[-1] = {r[-1]}')
+        #print(f'+++ level = {level}, r[-1] = {r[-1]}')
         for j in range(len(r)):
             #if (zfa[j,:].min() < 1e-6) and (zfa[j,:].max() > 0.9):
             if (zfa[j,:].min() < 0.5) and (zfa[j,:].max() > 0.5):
@@ -151,6 +151,7 @@ def setplot(plotdata=None):
 
     # Set up for item on these axes: scatter of 2d data
     plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
+    #plotitem.show = False
     plotitem.map_2d_to_1d = surface
     #plotitem.plot_var = 0
     plotitem.plotstyle = '-'
@@ -159,19 +160,26 @@ def setplot(plotdata=None):
 
     # Set up for item on these axes: scatter of 2d data
     plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
+    #plotitem.show = False
     plotitem.map_2d_to_1d = surface
     #plotitem.plot_var = 0
     plotitem.plotstyle = '-'
     plotitem.color = 'g'
     plotitem.amr_data_show = [0,0,1]  # which levels to plot data
 
+    # Note that you only need one plotitem above for all three levels if
+    # you set plotitem.amr_color (but this wouldn't plot symbols for level 2):
+    #plotitem.amr_color=['b','r','g']
+
+    # Or set plotitem.show = False for all items above if you only want
+    # to see the version extracted from all levels
+
     def plot_surface(current_data):
         # plot by extracting vertical transect from all levels:
         from mfclaw_tools import load_surface
-        from pylab import plot, fill_between
+        from pylab import plot, legend
         r,eta = load_surface(current_data.frameno, plotdata.outdir)
-        #fill_between(r, eta1, eta2, [0.9,0.9,0.9])
-        plot(r, eta, 'k')
+        plot(r, eta, 'm')
 
     plotaxes.afteraxes = plot_surface
 
