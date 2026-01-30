@@ -41,15 +41,15 @@ mfclaw_tools = fullpath_import(f'{root_dir}/mfrk2Dev/mfclaw_tools.py')
 
 
 xlower = 0
-xupper = 6e3
+xupper = 10e3
 h0 = 4000.
 
 # Initial eta and u
 L = xupper - xlower
-mx_H1 = 1000
+mx_H1 = 2000
 dx = L/mx_H1
 r = linspace(dx/2, xupper-dx/2, mx_H1)
-RC = 150  # crater radius
+RC = 600  # crater radius
 kmax = 1.5 * 2*pi/RC
 mk = mx_H1 * 2  # better choice?
 k = linspace(1e-6,kmax,mk)
@@ -66,7 +66,7 @@ outdir = f'_output{RC}m44finer'
 tf_mfclaw, find_frame_mfclaw = mfclaw_tools.load_times_mfclaw(outdir)
 
 # initial time for Airy:
-t0airy = 30
+t0airy = 60
 frameno0, t0frame = find_frame_mfclaw(time=t0airy)
 print(f'Using mfclaw frame {frameno0} at time {t0frame} for t0airy={t0airy}')
 #rkm, eta0, t0 = C.load_surf_mfclaw(outdir, j)
@@ -137,9 +137,9 @@ mfclaw_plot, = plot(rvals/1e3, eta_mfclaw, 'r', label='mfclaw')
 grid(True)
 xlabel('distance from crater (km)')
 ylabel('surface elevation (m)')
-rmax_plot = 3000.
+rmax_plot = RC*20
 xlim(0,rmax_plot/1e3)
-ylim(-25,25)
+ylim(-RC/6,RC/6)
 grid(True)
 title_text = title(f'Surface at t = {t0airy:6.1f}')
 
@@ -194,8 +194,8 @@ if __name__ == '__main__':
 
     print('Making anim...')
     #times = tf_mfclaw[:,1]
-    times = arange(30,121,10)
-    #times = [30, 60]
+    times = arange(t0airy,121,10)
+    times = [60, 120]
     anim = animation.FuncAnimation(fig, update, frames=times,
                                    interval=200, blit=False)
 
