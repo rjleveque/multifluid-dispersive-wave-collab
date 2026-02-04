@@ -45,6 +45,36 @@ zvals = arange(zmin, zmax, dz)
 
 grav = 9.81
 
+def load_surface_nc(fname_nc):
+    """
+    Load the surface as a function of r at a sequence of times t from
+    a netcdf file previously created by `extract_surface.py`
+    The netcdf file should contain an xarray DataArray with coordinates r,t.
+    """
+    import xarray as xr
+
+    surface_data = xr.open_dataarray(fname_nc)
+    tf = vstack((array(range(len(surface_data.coords['t']))),
+                 surface_data.coords['t'])).T
+                 
+    def find_frame(time):
+        """
+        find frameno for best match to time
+        """
+        if time < tf[0,1]:
+            k = 0
+        else:
+            k = where(tf[:,1] < time+1e-6)[0].max()
+            #print('+++ k = %i' % k, '   tf[k:k+2, :] = ',tf[k:k+2, :])
+            if (k < tf.shape[0]-1):
+                if (tf[k+1,1] - time) < (time - tf[k,1]):
+                    k = k+1
+        return int(tf[k,0]), tf[k,1]  # also return time of this frame
+
+    print('Found %i mfclaw frames up to time %.1f seconds' \
+                % (tf.shape[0], tf[:,1].max()))
+
+    return tf, find_frame, surface_data
 
 def load_times_mfclaw(outdir):
     """
@@ -141,10 +171,12 @@ def load_surface(frameno, outdir='_output', file_format='binary', rmax=inf):
         # determine range of z over which zfa is varying between 0 and 1:
         tol = 1e-5
         k1 = where(zfa_coarse > tol)[0].min()
-        k2 = where(zfa_coarse < 1-tol)[0].max()
+        k2 = where(zfa_coarse < 1-tol)[0].max() + 1
         if k2 <= k1:
             k1 = k1 - 1
             k2 = k2 + 1
+        k1 = max(k1,0)
+        k2 = min(k2,len(zvals_coarse)-1)
 
         #print(f'+++ k1={k1}, k2={k2}')
 
@@ -164,7 +196,6 @@ def load_surface(frameno, outdir='_output', file_format='binary', rmax=inf):
 
         eta_lowerbound[i] = zvals_fine[0]
         eta_upperbound[i] = zvals_fine[-1]
-
 
     if 0:
         # for debugging return lower and upper limits of zvals_fine too:

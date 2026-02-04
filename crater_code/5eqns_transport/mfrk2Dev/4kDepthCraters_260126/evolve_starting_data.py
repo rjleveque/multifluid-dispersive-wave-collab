@@ -41,7 +41,8 @@ mfclaw_tools = fullpath_import(f'{root_dir}/mfrk2Dev/mfclaw_tools.py')
 
 
 xlower = 0
-xupper = 10e3
+#xupper = 10e3 # for RC=150
+xupper = 20e3
 h0 = 4000.
 
 # Initial eta and u
@@ -59,19 +60,32 @@ if 0:
     width = 10e3; r0 = 40e3; wavelength = 5e3; ampl = 100.
     eta0 = ampl*exp(-((r-r0)/width)**2) * cos(r*2*pi/wavelength)
 
-#starting_data = loadtxt('starting.data',skiprows=2)
+if 0:
+    # load directly from fort.b files and extract surface
+    outdir = f'_output{RC}m44finer'
+    print(f'Loading solutions and extracting surface from {outdir}')
+    tf_mfclaw, find_frame_mfclaw = mfclaw_tools.load_times_mfclaw(outdir)
+    surface_data = None
+else:
+    # use surface_data previously extracted from fort.b files
+    fname_nc = f'surface{RC}m44finer.nc'
+    print(f'Loading surface_data from {fname_nc}')
+    tf_mfclaw, find_frame_mfclaw, surface_data = mfclaw_tools.load_surface_nc(fname_nc)
 
-outdir = f'_output{RC}m44finer'
-#tf_mfclaw, find_frame_mfclaw = C.load_times_mfclaw(outdir)
-tf_mfclaw, find_frame_mfclaw = mfclaw_tools.load_times_mfclaw(outdir)
 
+tfinal = tf_mfclaw[:,1].max()
+print(f'tfinal = {tfinal:.1f} sec')
 # initial time for Airy:
-t0airy = 60
+t0airy =  120
 frameno0, t0frame = find_frame_mfclaw(time=t0airy)
 print(f'Using mfclaw frame {frameno0} at time {t0frame} for t0airy={t0airy}')
 #rkm, eta0, t0 = C.load_surf_mfclaw(outdir, j)
 
-rvals, eta0vals = mfclaw_tools.load_surface(frameno0, outdir)
+if surface_data is not None:
+    rvals = surface_data.coords['r']
+    eta0vals = surface_data.sel(t=t0frame)
+else:
+    rvals, eta0vals = mfclaw_tools.load_surface(frameno0, outdir)
 
 #r = rvals
 rkm = r/1e3
@@ -137,7 +151,8 @@ mfclaw_plot, = plot(rvals/1e3, eta_mfclaw, 'r', label='mfclaw')
 grid(True)
 xlabel('distance from crater (km)')
 ylabel('surface elevation (m)')
-rmax_plot = RC*20
+#rmax_plot = RC*20
+rmax_plot = 20e3 # for RC=600
 xlim(0,rmax_plot/1e3)
 ylim(-RC/6,RC/6)
 grid(True)
@@ -173,8 +188,13 @@ def update(t):
         if tframe_mfclaw != t:
             print('*** tframe_mfclaw does not agree with t')
 
-        r_mfclaw, eta_mfclaw = mfclaw_tools.load_surface(frameno_mfclaw, outdir,
-                                                         rmax=rmax_plot)
+        if surface_data is not None:
+            r_mfclaw = surface_data.coords['r']
+            eta_mfclaw = surface_data.sel(t=tframe_mfclaw)
+        else:
+            r_mfclaw, eta_mfclaw = mfclaw_tools.load_surface(frameno_mfclaw,
+                                                    outdir, rmax=rmax_plot)
+
         mfclaw_plot.set_data(r_mfclaw/1e3, eta_mfclaw)
 
         title_text.set_text(f'Surface at t = {t:6.1f}')
@@ -194,8 +214,8 @@ if __name__ == '__main__':
 
     print('Making anim...')
     #times = tf_mfclaw[:,1]
-    times = arange(t0airy,121,10)
-    times = [60, 120]
+    times = arange(t0airy,tfinal,4)
+    #times = [60, 120]
     anim = animation.FuncAnimation(fig, update, frames=times,
                                    interval=200, blit=False)
 
