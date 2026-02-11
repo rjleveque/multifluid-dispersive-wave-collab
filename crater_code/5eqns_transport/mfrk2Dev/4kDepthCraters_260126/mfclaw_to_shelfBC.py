@@ -1,0 +1,113 @@
+
+from pylab import *
+
+import os,sys
+#import linear_waves as LW
+from scipy.interpolate import interp1d
+from clawpack.clawutil.util import fullpath_import
+
+# hardwired for now...
+root_dir = '/Users/rjl/git/Forks/multifluid-dispersive-wave-collab/crater_code/5eqns_transport/'
+mfclaw_tools = fullpath_import(f'{root_dir}/mfrk2Dev/mfclaw_tools.py')
+
+AGT = os.environ['AGT']
+LW = fullpath_import(os.path.join(AGT, 'linear_transforms','linear_waves.py'))
+
+grav = 9.81
+
+h0 = 4000.
+RC = 600.
+tAiry_start = 60.   # initial eta(r,t) from mfluid solution at this time
+tAiry_end = 7200.    # compute up to this time
+rAiry_end = 100e3    # capture the solution eta(r,t) as fcn of t at this r
+
+# domain for computing radial Hankel solution:
+xlower = 0
+xupper = 120e3  # at least as large as rAiry_end, how much larger??
+
+# directory for saving boundary conditions time series and plots:
+savefile_dir = f'./BC_RC{int(RC):04d}_h{int(h0):04d}'
+os.system('mkdir -p %s' % savefile_dir)
+
+# file for saving time series of eta and u (for SWE and Bouss) at rAiry_end:
+# (will be saved in directory savefile_dir)
+savefile_name = f'eta_hu_bc_RC{int(RC):04d}_h{int(h0):04d}_' \
+                + f'tstart{int(tAiry_start)}_rbc{int(rAiry_end/1000)}km'
+
+# Initial eta and u
+L = xupper - xlower
+mx = 5000  # Is this large enough?  How to choose?
+mk = 4000  # Is this large enough?  How to choose?
+
+dx = L/mx
+r = linspace(dx/2, xupper-dx/2, mx)
+
+kmax = 1.5 * 2*pi/RC
+k = linspace(1e-6,kmax,mk)
+
+# Create initial data eta0 for Airy solution based on mfclaw surface
+# at t = t0airy, possibly damped out near origin and/or for large r...
+
+
+# where to obtain mfclaw results:
+
+if 0:
+    # load directly from fort.b files and extract surface
+    outdir = f'_output{RC}m44finer'
+    print(f'Loading solutions and extracting surface from {outdir}')
+    tf_mfclaw, find_frame_mfclaw = mfclaw_tools.load_times_mfclaw(outdir)
+    surface_data = None
+else:
+    # use surface_data previously extracted from fort.b files
+    fname_nc = f'surface{int(RC):d}m44finer.nc'
+    print(f'Loading surface_data from {fname_nc}')
+    tf_mfclaw, find_frame_mfclaw, surface_data = \
+                                    mfclaw_tools.load_surface_nc(fname_nc)
+
+# when to switch from mfclaw solution to Airy:
+t0airy =  60
+frameno0, t0frame = find_frame_mfclaw(time=t0airy)
+print(f'Using mfclaw frame {frameno0} at time {t0frame} for t0airy={t0airy}')
+
+
+if surface_data is not None:
+    rvals = surface_data.coords['r']  # locations where surface was evaluated
+    eta0vals = surface_data.sel(t=t0frame)
+else:
+    # load full fort.b files and choose resolution of rvals based on amr data:
+    rvals, eta0vals = mfclaw_tools.load_surface(frameno0, outdir)
+
+
+eta0fcn = interp1d(rvals, eta0vals, fill_value=0., bounds_error=False)
+eta0 = eta0fcn(r)  # sample on r grid, extending by 0 if necessary for large r
+
+
+if 1:
+    # damp out near origin and/or for large r:
+    #eta0 = where(r>35e3, eta0*exp(-(r-35e3)/5e3), eta0)
+    r1damp = 0.2e3
+    wdamp = 0.5*r1damp   #e-folding width
+    eta0 = where(r<r1damp, eta0*exp((r-r1damp)/wdamp), eta0)
+
+figure(figsize=(9,5))
+plot(rvals/1e3, eta0vals, 'r', label=f'eta0vals at t={t0airy:.0f} from mfclaw')
+plot(r/1e3, eta0, 'b--',label=f'eta0 used for Airy')
+xlim(0,1.1*xupper/1e3)
+#fname = f'{savefile_dir}/eta0_t{t0airy:03d}.png'
+fname = f'{savefile_dir}/{savefile_name.replace('eta_hu_bc', 'eta0')}.png'
+savefig(fname)
+print('Created ',fname)
+
+print('Computing eta0hat transform...')
+print(f'  max(abs(eta0)) = {abs(eta0).max()}')
+eta0hat = LW.Htransform(r,eta0,k)
+print(f'  max(abs(eta0hat)) = {abs(eta0hat).max()}')
+omega = lambda k: LW.omega_airy(k,h0)
+reval = r  # grid to evaluate Airy solution
+
+fname = f'{savefile_dir}/{savefile_name}.txt'
+t,eta,hu_swe,hu_sgn = mfclaw_tools.make_bc(rAiry_end, tAiry_end, tAiry_start,
+                              eta0hat, k, h0, t=None, savefile=fname)
+
+fname = f'{savefile_dir}/{savefile_name}.png'
+mfclaw_tools.plot_bc(t,eta,hu_swe,hu_sgn,rAiry_end,tAiry_end, savefile=fname)
