@@ -73,17 +73,18 @@ else:
     tf_mfclaw, find_frame_mfclaw, surface_data = mfclaw_tools.load_surface_nc(fname_nc)
 
 
-tfinal = tf_mfclaw[:,1].max()
+#tfinal = tf_mfclaw[:,1].max()
+tfinal = 3600.
 print(f'tfinal = {tfinal:.1f} sec')
 # initial time for Airy:
-t0airy =  120
+t0airy =  180
 frameno0, t0frame = find_frame_mfclaw(time=t0airy)
 print(f'Using mfclaw frame {frameno0} at time {t0frame} for t0airy={t0airy}')
 #rkm, eta0, t0 = C.load_surf_mfclaw(outdir, j)
 
 if surface_data is not None:
-    rvals = surface_data.coords['r']
-    eta0vals = surface_data.sel(t=t0frame)
+    rvals = surface_data.coords['r'].data
+    eta0vals = surface_data.sel(t=t0frame).data
 else:
     rvals, eta0vals = mfclaw_tools.load_surface(frameno0, outdir)
 
@@ -107,7 +108,8 @@ if 1:
 figure(figsize=(9,5))
 plot(rvals/1e3, eta0vals, 'r', label=f'eta0vals at t={t0airy:.0f} from mfclaw')
 plot(r/1e3, eta0, 'b--',label=f'eta0 used for Airy')
-xlim(0,1.1*xupper/1e3)
+#xlim(0,1.1*xupper/1e3)
+xlim(0, 100.)
 fname = f'eta0_t{t0airy:03d}.png'
 savefig(fname)
 print('Created ',fname)
@@ -150,14 +152,15 @@ eta_mfclaw = eta0vals  # on grid rvals
 eta_airy = eta0   # agrees with eta_mfclaw at t0airy (but on grid reval)
 airy_plot, = plot(reval/1e3, eta_airy, 'b',
          label='Airy, starting from mfclaw at t=%.0f' % t0airy)
-mfclaw_plot, = plot(rvals/1e3, eta_mfclaw, 'r', label='mfclaw')
+#mfclaw_plot, = plot(rvals/1e3, eta_mfclaw, 'r', label='mfclaw')
 grid(True)
 xlabel('distance from crater (km)')
 ylabel('surface elevation (m)')
 #rmax_plot = RC*20
-rmax_plot = 20e3 # for RC=600
+rmax_plot = 100e3
 xlim(0,rmax_plot/1e3)
-ylim(-RC/6,RC/6)
+#ylim(-RC/6,RC/6)
+ylim(-20,20)
 grid(True)
 title_text = title(f'Surface at t = {t0airy:6.1f}')
 
@@ -186,19 +189,20 @@ def update(t):
     """
 
     if t > t0airy:
-        # mfluid:
-        frameno_mfclaw, tframe_mfclaw = find_frame_mfclaw(t)
-        if tframe_mfclaw != t:
-            print('*** tframe_mfclaw does not agree with t')
+        if 0:
+            # mfluid:
+            frameno_mfclaw, tframe_mfclaw = find_frame_mfclaw(t)
+            if tframe_mfclaw != t:
+                print('*** tframe_mfclaw does not agree with t')
 
-        if surface_data is not None:
-            r_mfclaw = surface_data.coords['r']
-            eta_mfclaw = surface_data.sel(t=tframe_mfclaw)
-        else:
-            r_mfclaw, eta_mfclaw = mfclaw_tools.load_surface(frameno_mfclaw,
-                                                    outdir, rmax=rmax_plot)
+            if surface_data is not None:
+                r_mfclaw = surface_data.coords['r']
+                eta_mfclaw = surface_data.sel(t=tframe_mfclaw)
+            else:
+                r_mfclaw, eta_mfclaw = mfclaw_tools.load_surface(frameno_mfclaw,
+                                                        outdir, rmax=rmax_plot)
 
-        mfclaw_plot.set_data(r_mfclaw/1e3, eta_mfclaw)
+            mfclaw_plot.set_data(r_mfclaw/1e3, eta_mfclaw)
 
         title_text.set_text(f'Surface at t = {t:6.1f}')
 
@@ -206,9 +210,20 @@ def update(t):
         print('Evaluating eta(r,t=%.0f) with Airy...' % t)
         omega = lambda k: LW.omega_airy(k,h0)
 
-        print(f'+++ t = {t}, eta0hat.max() = {abs(eta0hat).max()}')
+        #print(f'+++ t = {t}, eta0hat.max() = {abs(eta0hat).max()}')
+        rmax = 20e3 + 80e3 * min(600, t) / 600
+        dr = 20.
+        reval = arange(dr,rmax,dr)
+        print(f't = {t}, rmax = {rmax}, dr = {dr}, len(reval) = {len(reval)}')
+
         eta_airy,u_airy = LW.eta_u_radial(t-t0airy,reval,k,eta0hat,omega,h0,
                                           direction='outgoing')
+
+        # computed integral of eta^2 * r*dr for PE in radial coordinates
+        eta2r = eta_airy**2 * reval
+        eta2integral = eta2r.sum()*dr
+        print(f'integral of eta^2 * r*dr = {eta2integral:.2f}')
+
         #import pdb; pdb.set_trace()
         airy_plot.set_data(reval/1e3, eta_airy)
 
@@ -217,8 +232,8 @@ if __name__ == '__main__':
 
     print('Making anim...')
     #times = tf_mfclaw[:,1]
-    times = arange(t0airy,tfinal,4)
-    #times = [60, 120]
+    times = arange(400,3601,100)
+    #times = [t0airy, 200., 600., 1200.]
     anim = animation.FuncAnimation(fig, update, frames=times,
                                    interval=200, blit=False)
 
@@ -226,7 +241,7 @@ if __name__ == '__main__':
 
     # Output files:
     #name = 'Gaussian_AirySwitch_t%s' % str(t0airy).zfill(3)
-    name = f'RC{RC:04d}_AirySwitch_t{t0airy:03d}_moredamped'
+    name = f'RC{RC:04d}_AirySwitch_t{t0airy:03d}_longtime'
 
     fname_mp4 = name + '.mp4'
 

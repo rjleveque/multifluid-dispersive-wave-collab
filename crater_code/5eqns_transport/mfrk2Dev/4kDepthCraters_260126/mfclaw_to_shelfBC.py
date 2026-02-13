@@ -17,7 +17,7 @@ grav = 9.81
 
 h0 = 4000.
 RC = 600.
-tAiry_start = 60.   # initial eta(r,t) from mfluid solution at this time
+tAiry_start = 360.   # initial eta(r,t) from mfluid solution at this time
 tAiry_end = 7200.    # compute up to this time
 rAiry_end = 100e3    # capture the solution eta(r,t) as fcn of t at this r
 
@@ -26,7 +26,9 @@ xlower = 0
 xupper = 120e3  # at least as large as rAiry_end, how much larger??
 
 # directory for saving boundary conditions time series and plots:
-savefile_dir = f'./BC_RC{int(RC):04d}_h{int(h0):04d}'
+savefile_dir = f'./BC_RC{int(RC):04d}_h{int(h0):04d}_' \
+                + f'tstart{int(tAiry_start)}'
+
 os.system('mkdir -p %s' % savefile_dir)
 
 # file for saving time series of eta and u (for SWE and Bouss) at rAiry_end:
@@ -34,20 +36,23 @@ os.system('mkdir -p %s' % savefile_dir)
 savefile_name = f'eta_hu_bc_RC{int(RC):04d}_h{int(h0):04d}_' \
                 + f'tstart{int(tAiry_start)}_rbc{int(rAiry_end/1000)}km'
 
-# Initial eta and u
-L = xupper - xlower
-mx = 5000  # Is this large enough?  How to choose?
+if 0:
+    # try using r = rvals below instead of this...
+
+    # Initial eta and u
+    L = xupper - xlower
+    mx = 5000  # Is this large enough?  How to choose?
+
+    dx = L/mx
+    r = linspace(dx/2, xupper-dx/2, mx)
+
+# Hankel transform wave numbers k:
 mk = 4000  # Is this large enough?  How to choose?
-
-dx = L/mx
-r = linspace(dx/2, xupper-dx/2, mx)
-
 kmax = 1.5 * 2*pi/RC
 k = linspace(1e-6,kmax,mk)
 
 # Create initial data eta0 for Airy solution based on mfclaw surface
 # at t = t0airy, possibly damped out near origin and/or for large r...
-
 
 # where to obtain mfclaw results:
 
@@ -65,18 +70,20 @@ else:
                                     mfclaw_tools.load_surface_nc(fname_nc)
 
 # when to switch from mfclaw solution to Airy:
-t0airy =  60
+t0airy =  tAiry_start
 frameno0, t0frame = find_frame_mfclaw(time=t0airy)
 print(f'Using mfclaw frame {frameno0} at time {t0frame} for t0airy={t0airy}')
 
 
 if surface_data is not None:
-    rvals = surface_data.coords['r']  # locations where surface was evaluated
-    eta0vals = surface_data.sel(t=t0frame)
+    rvals = surface_data.coords['r'].data  # locations where surface was evaluated
+    eta0vals = surface_data.sel(t=t0frame).data
 else:
     # load full fort.b files and choose resolution of rvals based on amr data:
     rvals, eta0vals = mfclaw_tools.load_surface(frameno0, outdir)
 
+# set r, values to use in computing Hankel transform eta0hat of eta0:
+r = rvals  # may need to extend if eta0 isn't 0 near rvals[-1]?
 
 eta0fcn = interp1d(rvals, eta0vals, fill_value=0., bounds_error=False)
 eta0 = eta0fcn(r)  # sample on r grid, extending by 0 if necessary for large r
@@ -85,15 +92,20 @@ eta0 = eta0fcn(r)  # sample on r grid, extending by 0 if necessary for large r
 if 1:
     # damp out near origin and/or for large r:
     #eta0 = where(r>35e3, eta0*exp(-(r-35e3)/5e3), eta0)
-    r1damp = 0.2e3
-    wdamp = 0.5*r1damp   #e-folding width
+    #r1damp = 0.2e3
+    #wdamp = 0.5*r1damp   #e-folding width
+    r1damp = 1500.
+    wdamp = 0.3*r1damp   #e-folding width
     eta0 = where(r<r1damp, eta0*exp((r-r1damp)/wdamp), eta0)
 
 figure(figsize=(9,5))
 plot(rvals/1e3, eta0vals, 'r', label=f'eta0vals at t={t0airy:.0f} from mfclaw')
 plot(r/1e3, eta0, 'b--',label=f'eta0 used for Airy')
-xlim(0,1.1*xupper/1e3)
+xlim(0,max(rvals[-1],r[-1])/1e3)
+grid(True)
+legend(framealpha=1)
 #fname = f'{savefile_dir}/eta0_t{t0airy:03d}.png'
+title(f'eta0 for RC={RC:.0f}m, h0={h0:.0f}m')
 fname = f'{savefile_dir}/{savefile_name.replace('eta_hu_bc', 'eta0')}.png'
 savefig(fname)
 print('Created ',fname)
@@ -110,4 +122,5 @@ t,eta,hu_swe,hu_sgn = mfclaw_tools.make_bc(rAiry_end, tAiry_end, tAiry_start,
                               eta0hat, k, h0, t=None, savefile=fname)
 
 fname = f'{savefile_dir}/{savefile_name}.png'
-mfclaw_tools.plot_bc(t,eta,hu_swe,hu_sgn,rAiry_end,tAiry_end, savefile=fname)
+mfclaw_tools.plot_bc(t,eta,hu_swe,hu_sgn,rAiry_end,tAiry_end,
+                    tAiry_start,RC,h0,savefile=fname)
