@@ -508,34 +508,35 @@ def make_bc(rAiry_end, tAiry_end, tAiry_start, etahat_start, k, h0,
         print('Created ',savefile)
     return t, eta, hu_swe, hu_sgn
 
-def plot_bc(t,eta,hu_swe,hu_sgn,rAiry_end,tAiry_end, savefile=None):
+def plot_bc(t,eta,hu_swe,hu_sgn,rAiry_end,tAiry_end,
+            tAiry_start,RC,h0,savefile=None):
     """
     Plot the time series of eta at rAiry_end in upper subplot,
     and both hu_swe and hu_sgn in lower subplot,
-    for the times in t (converted from seconds to minutes)
+    for the times in t
     and with xlim determined by tAiry_end.
     """
-    figure(figsize=(10,7))
+    figure(figsize=(12,8))
     subplot(211)
-    plot(t/60,eta,'b')
-    title('time series of eta, hu at rAiry_end = %s km' \
-            % int(rAiry_end/1e3), fontsize=15)
+    plot(t,eta,'b')
+    title(f'time series of eta, hu at rAiry_end = {int(rAiry_end/1e3)} km\n' \
+            + f'RC={RC:.0f}, h0={h0:.0f}, tAiry_start={tAiry_start:.0f}',
+          fontsize=15)
     grid(True)
-    xlim(0,tAiry_end/60)
-    #xlabel('time (minutes)', fontsize=13)
+    xlim(0,tAiry_end)
     ylabel('surface eta (m)', fontsize=13)
     xticks(fontsize=13)
     yticks(fontsize=13)
 
     subplot(212)
-    plot(t/60,hu_swe,'b',label='hu for swe')
-    plot(t/60,hu_sgn,'r',label='hu for sgn')
+    plot(t,hu_swe,'b',label='hu for swe')
+    plot(t,hu_sgn,'r',label='hu for sgn')
     #title('time series of hu(r2,t) at r2 = rAiry_end = %s km' \
     #        % int(rAiry_end/1e3), fontsize=15)
     grid(True)
     legend(loc='upper left', framealpha=1, fontsize=11)
-    xlim(0,tAiry_end/60)
-    xlabel('time (minutes)', fontsize=13)
+    xlim(0,tAiry_end)
+    xlabel('time (seconds)', fontsize=13)
     ylabel('momentum hu (m**2/s)', fontsize=13)
     xticks(fontsize=13)
     yticks(fontsize=13)

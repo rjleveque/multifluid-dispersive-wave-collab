@@ -17,6 +17,8 @@ import os,sys
 #import linear_waves as LW
 from scipy.interpolate import interp1d
 
+global eta_bc
+
 def fullpath_import(fullpath):
     """
     Return a module imported from a full path name.
@@ -42,7 +44,7 @@ mfclaw_tools = fullpath_import(f'{root_dir}/mfrk2Dev/mfclaw_tools.py')
 
 xlower = 0
 #xupper = 10e3 # for RC=150
-xupper = 20e3
+xupper = 40e3
 h0 = 4000.
 
 # Initial eta and u
@@ -73,11 +75,9 @@ else:
     tf_mfclaw, find_frame_mfclaw, surface_data = mfclaw_tools.load_surface_nc(fname_nc)
 
 
-#tfinal = tf_mfclaw[:,1].max()
-tfinal = 3600.
-print(f'tfinal = {tfinal:.1f} sec')
+
 # initial time for Airy:
-t0airy =  180
+t0airy =  360
 frameno0, t0frame = find_frame_mfclaw(time=t0airy)
 print(f'Using mfclaw frame {frameno0} at time {t0frame} for t0airy={t0airy}')
 #rkm, eta0, t0 = C.load_surf_mfclaw(outdir, j)
@@ -88,8 +88,7 @@ if surface_data is not None:
 else:
     rvals, eta0vals = mfclaw_tools.load_surface(frameno0, outdir)
 
-#r = rvals
-rkm = r/1e3
+r = rvals # may be extended below
 
 eta0fcn = interp1d(rvals, eta0vals, fill_value=0., bounds_error=False)
 eta0 = eta0fcn(r)  # sample on r grid, extending by 0 if necessary for large r
@@ -104,6 +103,23 @@ if 1:
     wdamp = 0.3*r1damp   #e-folding width
     eta0 = where(r<r1damp, eta0*exp((r-r1damp)/wdamp), eta0)
     eta0 = where(r<r1damp, eta0*exp((r-r1damp)/wdamp), eta0)
+
+    eta2 = eta0vals[-1]
+    r2 = rvals[-1]
+    slope2 = (eta0vals[-1] - eta0vals[-5]) / (rvals[-1] - rvals[-5])
+    dr = rvals[-1] - rvals[-2]
+    rextend = []
+    rint = r2 - eta2/slope2
+    print(f'slope2 = {slope2}, intersects at {rint}')
+    if rint > r2:
+        rnew = arange(r2+dr, rint, dr)
+        print(f'Adding {len(rnew)} additional points to r')
+        r = hstack((rvals, rnew))
+        eta0new = eta2 + (rnew-r2)*slope2
+        eta0 = hstack((eta0, eta0new))
+
+rkm = r/1e3
+
 
 figure(figsize=(9,5))
 plot(rvals/1e3, eta0vals, 'r', label=f'eta0vals at t={t0airy:.0f} from mfclaw')
@@ -157,7 +173,7 @@ grid(True)
 xlabel('distance from crater (km)')
 ylabel('surface elevation (m)')
 #rmax_plot = RC*20
-rmax_plot = 100e3
+rmax_plot = 60e3
 xlim(0,rmax_plot/1e3)
 #ylim(-RC/6,RC/6)
 ylim(-20,20)
@@ -181,13 +197,15 @@ if 0:
 
 legend(loc='upper right', framealpha=1)
 
+eta_bc = []
+r_bc_km = 40
 
 def update(t):
     """
     Update an existing plot by resetting the data.
     Use the frames from each simulation closest to the given time t.
     """
-
+    global eta_bc
     if t > t0airy:
         if 0:
             # mfluid:
@@ -224,6 +242,8 @@ def update(t):
         eta2integral = eta2r.sum()*dr
         print(f'integral of eta^2 * r*dr = {eta2integral:.2f}')
 
+        j = where(reval/1e3 < r_bc_km)[0].max()
+        eta_bc.append([t,eta_airy[j]])
         #import pdb; pdb.set_trace()
         airy_plot.set_data(reval/1e3, eta_airy)
 
@@ -232,8 +252,8 @@ if __name__ == '__main__':
 
     print('Making anim...')
     #times = tf_mfclaw[:,1]
-    times = arange(400,3601,100)
-    #times = [t0airy, 200., 600., 1200.]
+    times = arange(360,1201,10)
+    #times = [t0airy, t0airy+20]
     anim = animation.FuncAnimation(fig, update, frames=times,
                                    interval=200, blit=False)
 
@@ -258,3 +278,11 @@ if __name__ == '__main__':
     if fname_html:
         # html version:
         animation_tools.make_html(anim, file_name=fname_html, title=name)
+
+    eta_bc = array(eta_bc)
+    figure()
+    plot(eta_bc[:,0], eta_bc[:,1])
+    title(f'eta_airy vs t at {r_bc_km}km')
+    fname = f'eta_airy_bc_{r_bc_km}km.png'
+    savefig(fname)
+    print('Created ',fname)

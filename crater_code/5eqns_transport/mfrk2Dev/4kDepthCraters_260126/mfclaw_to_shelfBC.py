@@ -18,8 +18,8 @@ grav = 9.81
 h0 = 4000.
 RC = 600.
 tAiry_start = 360.   # initial eta(r,t) from mfluid solution at this time
-tAiry_end = 7200.    # compute up to this time
-rAiry_end = 100e3    # capture the solution eta(r,t) as fcn of t at this r
+tAiry_end = 1500.    # compute up to this time
+rAiry_end = 40e3    # capture the solution eta(r,t) as fcn of t at this r
 
 # domain for computing radial Hankel solution:
 xlower = 0
@@ -94,9 +94,28 @@ if 1:
     #eta0 = where(r>35e3, eta0*exp(-(r-35e3)/5e3), eta0)
     #r1damp = 0.2e3
     #wdamp = 0.5*r1damp   #e-folding width
-    r1damp = 1500.
-    wdamp = 0.3*r1damp   #e-folding width
-    eta0 = where(r<r1damp, eta0*exp((r-r1damp)/wdamp), eta0)
+    r1damp = 1500.  # damp for 0 <= r < r1damp
+    w1damp = 0.3*r1damp   # e-folding width
+    eta0 = where(r<r1damp, eta0*exp((r-r1damp)/w1damp), eta0)
+
+    #r2damp = 0.9*rvals[-1] # damp for r > r2damp
+    #w2damp = 0.3*0.1*rvals[-1]
+    #eta0 = where(r>r2damp, eta0*exp((r2damp-r)/w2damp), eta0)
+
+    eta2 = eta0vals[-1]
+    r2 = rvals[-1]
+    slope2 = (eta0vals[-1] - eta0vals[-5]) / (rvals[-1] - rvals[-5])
+    dr = rvals[-1] - rvals[-2]
+    rextend = []
+    rint = r2 - eta2/slope2
+    print(f'slope2 = {slope2}, intersects at {rint}')
+    if rint > r2:
+        rnew = arange(r2+dr, rint, dr)
+        print(f'Adding {len(rnew)} additional points to r')
+        r = hstack((rvals, rnew))
+        eta0new = eta2 + (rnew-r2)*slope2
+        eta0 = hstack((eta0, eta0new))
+
 
 figure(figsize=(9,5))
 plot(rvals/1e3, eta0vals, 'r', label=f'eta0vals at t={t0airy:.0f} from mfclaw')
