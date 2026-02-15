@@ -17,7 +17,7 @@ grav = 9.81
 
 h0 = 4000.
 RC = 600.
-tAiry_start = 240.   # initial eta(r,t) from mfluid solution at this time
+tAiry_start = 90.   # initial eta(r,t) from mfluid solution at this time
 tAiry_end = 7200.    # compute up to this time
 rAiry_end = 100e3    # capture the solution eta(r,t) as fcn of t at this r
 
@@ -106,6 +106,9 @@ if 1:
     rint = r2 - eta2/slope2
     print(f'slope2 = {slope2}, intersects at {rint}')
     if rint > r2:
+        if rint > 1.1*r2:
+            print(f'*** rint = {rint:.0f} too large, restricing to 1.1*r2')
+            rint = 1.1*r2
         rnew = arange(r2+dr, rint, dr)
         print(f'Adding {len(rnew)} additional points to r')
         r = hstack((rvals, rnew))

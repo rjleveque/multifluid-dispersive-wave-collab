@@ -78,7 +78,7 @@ else:
 
 
 # initial time for Airy:
-t0airy =  240
+t0airy =  90
 frameno0, t0frame = find_frame_mfclaw(time=t0airy)
 print(f'Using mfclaw frame {frameno0} at time {t0frame} for t0airy={t0airy}')
 #rkm, eta0, t0 = C.load_surf_mfclaw(outdir, j)
@@ -113,6 +113,9 @@ if 1:
     rint = r2 - eta2/slope2
     print(f'slope2 = {slope2}, intersects at {rint}')
     if rint > r2:
+        if rint > 1.1*r2:
+            print(f'*** rint = {rint:.0f} too large, restricing to 1.1*r2')
+            rint = 1.1*r2
         rnew = arange(r2+dr, rint, dr)
         print(f'Adding {len(rnew)} additional points to r')
         r = hstack((rvals, rnew))
