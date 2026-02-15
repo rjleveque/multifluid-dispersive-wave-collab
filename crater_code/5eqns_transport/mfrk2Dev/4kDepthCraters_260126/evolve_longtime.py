@@ -12,6 +12,7 @@ if 'matplotlib' not in sys.modules:
 
 from pylab import *
 from matplotlib import animation
+from clawpack.visclaw import animation_tools
 
 import os,sys
 #import linear_waves as LW
@@ -77,7 +78,7 @@ else:
 
 
 # initial time for Airy:
-t0airy =  360
+t0airy =  240
 frameno0, t0frame = find_frame_mfclaw(time=t0airy)
 print(f'Using mfclaw frame {frameno0} at time {t0frame} for t0airy={t0airy}')
 #rkm, eta0, t0 = C.load_surf_mfclaw(outdir, j)
@@ -117,6 +118,11 @@ if 1:
         r = hstack((rvals, rnew))
         eta0new = eta2 + (rnew-r2)*slope2
         eta0 = hstack((eta0, eta0new))
+    else:
+        # extrapolation doesn't work, so damp out
+        r2damp = 0.9*rvals[-1] # damp for r > r2damp
+        w2damp = 0.3*0.1*rvals[-1]
+        eta0 = where(r>r2damp, eta0*exp((r2damp-r)/w2damp), eta0)
 
 rkm = r/1e3
 
@@ -173,7 +179,7 @@ grid(True)
 xlabel('distance from crater (km)')
 ylabel('surface elevation (m)')
 #rmax_plot = RC*20
-rmax_plot = 60e3
+rmax_plot = 100e3
 xlim(0,rmax_plot/1e3)
 #ylim(-RC/6,RC/6)
 ylim(-20,20)
@@ -198,7 +204,7 @@ if 0:
 legend(loc='upper right', framealpha=1)
 
 eta_bc = []
-r_bc_km = 40
+r_bc_km = None
 
 def update(t):
     """
@@ -206,7 +212,8 @@ def update(t):
     Use the frames from each simulation closest to the given time t.
     """
     global eta_bc
-    if t > t0airy:
+    #if t > t0airy:
+    if 1:
         if 0:
             # mfluid:
             frameno_mfclaw, tframe_mfclaw = find_frame_mfclaw(t)
@@ -242,9 +249,10 @@ def update(t):
         eta2integral = eta2r.sum()*dr
         print(f'integral of eta^2 * r*dr = {eta2integral:.2f}')
 
-        j = where(reval/1e3 < r_bc_km)[0].max()
-        eta_bc.append([t,eta_airy[j]])
-        #import pdb; pdb.set_trace()
+        if r_bc_km is not None:
+            j = where(reval/1e3 < r_bc_km)[0].max()
+            eta_bc.append([t,eta_airy[j]])
+
         airy_plot.set_data(reval/1e3, eta_airy)
 
 
@@ -252,8 +260,8 @@ if __name__ == '__main__':
 
     print('Making anim...')
     #times = tf_mfclaw[:,1]
-    times = arange(360,1201,10)
-    #times = [t0airy, t0airy+20]
+    times = arange(t0airy,1801,30)
+    #times = [t0airy, t0airy+20, t0airy+40]
     anim = animation.FuncAnimation(fig, update, frames=times,
                                    interval=200, blit=False)
 
@@ -279,10 +287,11 @@ if __name__ == '__main__':
         # html version:
         animation_tools.make_html(anim, file_name=fname_html, title=name)
 
-    eta_bc = array(eta_bc)
-    figure()
-    plot(eta_bc[:,0], eta_bc[:,1])
-    title(f'eta_airy vs t at {r_bc_km}km')
-    fname = f'eta_airy_bc_{r_bc_km}km.png'
-    savefig(fname)
-    print('Created ',fname)
+    if r_bc_km is not None:
+        eta_bc = array(eta_bc)
+        figure()
+        plot(eta_bc[:,0], eta_bc[:,1])
+        title(f'eta_airy vs t at {r_bc_km}km')
+        fname = f'eta_airy_bc_{r_bc_km}km.png'
+        savefig(fname)
+        print('Created ',fname)
