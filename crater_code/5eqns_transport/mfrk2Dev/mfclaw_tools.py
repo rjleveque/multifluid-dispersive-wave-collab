@@ -431,7 +431,7 @@ def make_Airy_data(tAiry_start, r, k):
     return eta, etahat
 
 def make_bc(rAiry_end, tAiry_end, tAiry_start, etahat_start, k, h0,
-            t=None, omega=None, savefile=None):
+            t=None, omega=None, savefile=None, return_hu_airy=False):
 
     """
     Create boundary data eta(rAiry_end,t) at fixed radius rAiry_end for
@@ -489,6 +489,17 @@ def make_bc(rAiry_end, tAiry_end, tAiry_start, etahat_start, k, h0,
         kt = kfcn(2*pi/Tt)  # estimate of k at each t
         cphase = omega(kt)/kt
         hu_sgn = cphase * eta
+
+        if return_hu_airy:
+            # also compute for Airy
+            kk = linspace(0,0.015,1500)
+            omega = lambda k: LW.omega_airy(k,h0)
+            ww = omega(kk)
+            kfcn = interp1d(ww,kk)  # k as a function of omega
+            kt = kfcn(2*pi/Tt)  # estimate of k at each t
+            cphase = omega(kt)/kt
+            hu_airy = cphase * eta
+
     else:
         raise NotImplementedError('have not implemented cgroup approach')
         # approximate group velocity of waves arriving at time t:
@@ -506,7 +517,12 @@ def make_bc(rAiry_end, tAiry_end, tAiry_start, etahat_start, k, h0,
                                  % (rAiry_end,tAiry_start,len(eta)),
                 comments='',fmt='%20.10e')
         print('Created ',savefile)
-    return t, eta, hu_swe, hu_sgn
+
+    if return_hu_airy:
+        return t, eta, hu_swe, hu_sgn, hu_airy
+    else:
+        return t, eta, hu_swe, hu_sgn
+
 
 def plot_bc(t,eta,hu_swe,hu_sgn,rAiry_end,tAiry_end,
             tAiry_start,RC,h0,savefile=None):
