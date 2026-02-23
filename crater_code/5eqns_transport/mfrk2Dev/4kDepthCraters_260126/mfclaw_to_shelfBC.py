@@ -17,13 +17,12 @@ grav = 9.81
 
 h0 = 4000.
 RC = 600.
-tAiry_start = 90.   # initial eta(r,t) from mfluid solution at this time
-tAiry_end = 7200.    # compute up to this time
-rAiry_end = 100e3    # capture the solution eta(r,t) as fcn of t at this r
+t0airy = 180.
+tAiry_start = t0airy   # initial eta(r,t) from mfluid solution at this time
+tAiry_end = 7200.      # compute up to this time
+rAiry_end = 100e3      # capture the solution eta(r,t) as fcn of t at this r
 
-# domain for computing radial Hankel solution:
-xlower = 0
-xupper = 120e3  # at least as large as rAiry_end, how much larger??
+
 
 # directory for saving boundary conditions time series and plots:
 savefile_dir = f'./BC_RC{int(RC):04d}_h{int(h0):04d}_' \
@@ -33,22 +32,14 @@ os.system('mkdir -p %s' % savefile_dir)
 
 # file for saving time series of eta and u (for SWE and Bouss) at rAiry_end:
 # (will be saved in directory savefile_dir)
-savefile_name = f'eta_hu_bc_RC{int(RC):04d}_h{int(h0):04d}_' \
+savefile_name = f'eta_hu_bc2_RC{int(RC):04d}_h{int(h0):04d}_' \
                 + f'tstart{int(tAiry_start)}_rbc{int(rAiry_end/1000)}km'
 
-if 0:
-    # try using r = rvals below instead of this...
-
-    # Initial eta and u
-    L = xupper - xlower
-    mx = 5000  # Is this large enough?  How to choose?
-
-    dx = L/mx
-    r = linspace(dx/2, xupper-dx/2, mx)
 
 # Hankel transform wave numbers k:
-mk = 4000  # Is this large enough?  How to choose?
-kmax = 1.5 * 2*pi/RC
+mk = 9000  # Is this large enough?  How to choose?
+#kmax = 1.5 * 2*pi/RC
+kmax = 0.02
 k = linspace(1e-6,kmax,mk)
 
 # Create initial data eta0 for Airy solution based on mfclaw surface
@@ -70,7 +61,6 @@ else:
                                     mfclaw_tools.load_surface_nc(fname_nc)
 
 # when to switch from mfclaw solution to Airy:
-t0airy =  tAiry_start
 frameno0, t0frame = find_frame_mfclaw(time=t0airy)
 print(f'Using mfclaw frame {frameno0} at time {t0frame} for t0airy={t0airy}')
 
@@ -95,7 +85,7 @@ if 1:
     #r1damp = 0.2e3
     #wdamp = 0.5*r1damp   #e-folding width
     r1damp = 1500.  # damp for 0 <= r < r1damp
-    w1damp = 0.3*r1damp   # e-folding width
+    w1damp = 0.15*r1damp   # e-folding width
     eta0 = where(r<r1damp, eta0*exp((r-r1damp)/w1damp), eta0)
 
     eta2 = eta0vals[-1]

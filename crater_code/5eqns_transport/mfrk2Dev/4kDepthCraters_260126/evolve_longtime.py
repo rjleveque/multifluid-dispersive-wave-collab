@@ -13,12 +13,13 @@ if 'matplotlib' not in sys.modules:
 from pylab import *
 from matplotlib import animation
 from clawpack.visclaw import animation_tools
+from scipy.signal import envelope
 
 import os,sys
 #import linear_waves as LW
 from scipy.interpolate import interp1d
 
-global eta_bc
+global eta_bc, etamax
 
 def fullpath_import(fullpath):
     """
@@ -54,7 +55,8 @@ mx_H1 = 2000
 dx = L/mx_H1
 r = linspace(dx/2, xupper-dx/2, mx_H1)
 RC = 600  # crater radius
-kmax = 1.5 * 2*pi/RC
+#kmax = 1.5 * 2*pi/RC
+kmax = 0.2
 mk = mx_H1 * 2  # better choice?
 k = linspace(1e-6,kmax,mk)
 
@@ -78,7 +80,7 @@ else:
 
 
 # initial time for Airy:
-t0airy =  90
+t0airy =  30
 frameno0, t0frame = find_frame_mfclaw(time=t0airy)
 print(f'Using mfclaw frame {frameno0} at time {t0frame} for t0airy={t0airy}')
 #rkm, eta0, t0 = C.load_surf_mfclaw(outdir, j)
@@ -95,7 +97,7 @@ eta0fcn = interp1d(rvals, eta0vals, fill_value=0., bounds_error=False)
 eta0 = eta0fcn(r)  # sample on r grid, extending by 0 if necessary for large r
 
 
-if 1:
+if 0:
     # damp out near origin and/or for large r:
     #eta0 = where(r>35e3, eta0*exp(-(r-35e3)/5e3), eta0)
     #r1damp = 0.2e3
@@ -209,12 +211,16 @@ legend(loc='upper right', framealpha=1)
 eta_bc = []
 r_bc_km = None
 
+etamax = zeros(eta_airy.shape)
+r_etamax = reval.copy()
+etamax_plot, = plot(r_etamax/1e3, etamax, 'r', label='envelope so far')
+
 def update(t):
     """
     Update an existing plot by resetting the data.
     Use the frames from each simulation closest to the given time t.
     """
-    global eta_bc
+    global eta_bc, etamax
     #if t > t0airy:
     if 1:
         if 0:
@@ -247,6 +253,8 @@ def update(t):
         eta_airy,u_airy = LW.eta_u_radial(t-t0airy,reval,k,eta0hat,omega,h0,
                                           direction='outgoing')
 
+        eta_airy = real(eta_airy)
+
         # computed integral of eta^2 * r*dr for PE in radial coordinates
         eta2r = eta_airy**2 * reval
         eta2integral = eta2r.sum()*dr
@@ -256,6 +264,10 @@ def update(t):
             j = where(reval/1e3 < r_bc_km)[0].max()
             eta_bc.append([t,eta_airy[j]])
 
+        eta_env = envelope(eta_airy)
+        etamax[:len(reval)] = maximum(etamax[:len(reval)], eta_env[0,:])
+        etamax_plot.set_data(r_etamax/1e3, etamax)
+
         airy_plot.set_data(reval/1e3, eta_airy)
 
 
@@ -263,10 +275,13 @@ if __name__ == '__main__':
 
     print('Making anim...')
     #times = tf_mfclaw[:,1]
-    times = arange(t0airy,1801,30)
+    times = arange(t0airy,1801,300)
     #times = [t0airy, t0airy+20, t0airy+40]
+
+
     anim = animation.FuncAnimation(fig, update, frames=times,
                                    interval=200, blit=False)
+
 
     print(f'+++ done making anim = {anim}')
 
@@ -298,3 +313,7 @@ if __name__ == '__main__':
         fname = f'eta_airy_bc_{r_bc_km}km.png'
         savefig(fname)
         print('Created ',fname)
+
+    fname = name + '_env.txt'
+    savetxt(fname, vstack((rvals, etamax)).T, fmt='%16.6f')
+    print('Created ',fname)
