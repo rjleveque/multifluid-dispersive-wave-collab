@@ -10,6 +10,21 @@ function setplot is called to set the plot parameters.
 
 import os
 
+from clawpack.clawutil.util import fullpath_import
+mfclaw_tools = fullpath_import('./mfclaw_tools.py') # fix path if needed
+
+# set fname_nc to the file created by extract_all_surfaces.py
+# or set to None if no such file and surface must be extracted from fort.b
+#fname_nc = 'surface600m44finer.nc'
+fname_nc = 'surface_RC300.nc'
+#fname_nc = None
+
+if fname_nc is not None:
+    # load surfaces from a netCDF file that was already created using
+    # extract_all_surfaces.py
+    tf, find_frame, surface_data = mfclaw_tools.load_surface_nc(fname_nc)
+
+
 
 #--------------------------
 def setplot(plotdata=None):
@@ -99,86 +114,20 @@ def setplot(plotdata=None):
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes()
-    plotaxes.xlimits = [0,3000]
+    plotaxes.xlimits = [0,6000]
     plotaxes.ylimits = [-550, 950]
     plotaxes.title = 'Surface plot'
     plotaxes.grid = True
 
-    def surface(current_data):
-        # Return radius of each grid cell and surface elevation
-        from numpy import nan, isnan, nanmin, nanmax
-        h0 = 4000.  # ocean depth
-        r = current_data.x[:,0]
-        y = current_data.y
-        level = current_data.level
-        dy = y[0,1] - y[0,0]
-        ylow = y.min() - dy/2.
-        q = current_data.q
-        zfa = q[5,:,:]  # q(6,:,:) in Fortran, called zfa in Keh-Ming's code
-        # compute have as in Keh-Mings out1.f:
-        #have = (1-zfa).sum(axis=1) * dy   # sum up in y
-        have = nan*zfa[:,0]  # all nan to start
-        #print(f'+++ level = {level}, r[-1] = {r[-1]}')
-        for j in range(len(r)):
-            #if (zfa[j,:].min() < 1e-6) and (zfa[j,:].max() > 0.9):
-            if (zfa[j,:].min() < 0.5) and (zfa[j,:].max() > 0.5):
-                # surface seems to exist in jth column of this patch
-                have[j] = (1-zfa[j,:]).sum() * dy   # sum up in y on this patch
-                assert have[j] > 0, '*** expected have[j]>0'
-                have[j] = have[j] + (ylow+h0)  # add depth of water below patch
-                have[j] = have[j] - h0
-            else:
-                have[j] = nan  # not needed now
-        #import pdb; pdb.set_trace()
-        #if not isnan(nanmax(have)):
-            #print(f'r: {r.min():7.0f},{r.max():7.0f}  y:{y.min():7.0f},{y.max():7.0f}  have: {nanmin(have):7.0f},{nanmax(have):7.0f}')
-            #print(f'r.min() = {r.min()}, r.max() = {r.max()}')
-            #print(f'y.min() = {y.min()}, y.max() = {y.max()}')
-            #print(f'have.min() = {have.min()}, have.max() = {have.max()}')
-
-        return r,have
-
-    # Set up for item on these axes: scatter of 2d data
-    plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
-    #plotitem.show = False
-    plotitem.map_2d_to_1d = surface
-    #plotitem.plot_var = 0
-    #plotitem.plotstyle = '-'
-    plotitem.plotstyle = 'bo-'
-    plotitem.kwargs = {'markersize':3}
-    #plotitem.color = 'b'
-    plotitem.amr_data_show = [1,0,0]  # which levels to plot data
-
-    # Set up for item on these axes: scatter of 2d data
-    plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
-    #plotitem.show = False
-    plotitem.map_2d_to_1d = surface
-    #plotitem.plot_var = 0
-    plotitem.plotstyle = '-'
-    plotitem.color = 'r'
-    plotitem.amr_data_show = [0,1,0]  # which levels to plot data
-
-    # Set up for item on these axes: scatter of 2d data
-    plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
-    #plotitem.show = False
-    plotitem.map_2d_to_1d = surface
-    #plotitem.plot_var = 0
-    plotitem.plotstyle = '-'
-    plotitem.color = 'g'
-    plotitem.amr_data_show = [0,0,1]  # which levels to plot data
-
-    # Note that you only need one plotitem above for all three levels if
-    # you set plotitem.amr_color (but this wouldn't plot symbols for level 2):
-    #plotitem.amr_color=['b','r','g']
-
-    # Or set plotitem.show = False for all items above if you only want
-    # to see the version extracted from all levels
-
     def plot_surface(current_data):
-        # plot by extracting vertical transect from all levels:
-        from mfclaw_tools import load_surface
         from pylab import plot, legend
-        r,eta = load_surface(current_data.frameno, plotdata.outdir)
+        if fname_nc is not None:
+            r = surface_data.coords['r'].to_numpy()  # convert to nd array
+            eta = surface_data.sel(t=current_data.t).to_numpy()
+        else:
+            # this takes a lot longer (integrates vertically):
+            r,eta = mfclaw_tools.load_surface(current_data.frameno,
+                                              plotdata.outdir)
         plot(r, eta, 'm')
 
     plotaxes.afteraxes = plot_surface
