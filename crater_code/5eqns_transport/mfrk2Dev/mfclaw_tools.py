@@ -9,7 +9,7 @@ import glob
 from clawpack.pyclaw import Solution
 from clawpack.visclaw import gridtools
 from clawpack.clawutil.data import ClawData
-
+import xarray as xr
 
 try:
     # should be in recent Clawpack >= v5.13.0:
@@ -74,6 +74,7 @@ def load_surface_nc(fname_nc):
                 % (tf.shape[0], tf[:,1].max()))
 
     return tf, find_frame, surface_data
+
 
 def load_times_mfclaw(outdir):
     """
@@ -201,6 +202,26 @@ def load_surface(frameno, outdir='_output', file_format='binary', rmax=inf):
         return rvals, eta, eta_lowerbound, eta_upperbound
     else:
         return rvals, eta
+
+def extract_surface(outdir, fname_nc):
+    tf_mfclaw, find_frame_mfclaw = load_times_mfclaw(outdir)
+
+    nframes = tf_mfclaw.shape[0]
+    eta = None
+    for k in range(nframes):
+        frameno = tf_mfclaw[k,0]
+        tframe = tf_mfclaw[k,1]
+        r_k, eta_k = load_surface(k, outdir)
+        if eta is None:
+            eta = zeros((len(r_k), nframes))
+        eta[:,k] = eta_k
+
+    surface_data = xr.DataArray(eta, dims=('r','t'),
+                            coords={'r':r_k, 't':tf_mfclaw[:nframes,1]})
+
+    surface_data.to_netcdf(fname_nc)
+    print('Created ',fname_nc)
+    return surface_data
 
 
 def load_surface_fromtop(frameno, outdir='_output', file_format='binary'):
@@ -483,7 +504,7 @@ def make_bc(rAiry_end, tAiry_end, tAiry_start, etahat_start, k, h0,
         Tperiod = hstack((Tperiod[0], Tperiod, Tperiod[-1], Tperiod[-1]))
         Tfcn = interp1d(tpeaks, Tperiod) #, fill_value=0., bounds_error=False)
         Tt = Tfcn(t) # estimate of period at each time in t
-        kk = linspace(0,0.01,1000)
+        kk = linspace(0,0.1,1000)
         ww = omega(kk)
         kfcn = interp1d(ww,kk)  # k as a function of omega
         kt = kfcn(2*pi/Tt)  # estimate of k at each t
